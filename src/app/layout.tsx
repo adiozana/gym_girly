@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Assistant } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import { strings } from "@/lib/strings";
 import "./globals.css";
 
@@ -24,7 +25,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="he" dir="rtl" className={assistant.variable}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

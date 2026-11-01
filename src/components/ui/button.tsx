@@ -14,6 +14,8 @@ const buttonVariants = cva(
         ghost: "text-ink active:bg-blush",
         link: "text-rose-deep active:opacity-70",
         destructive: "border-danger/30 bg-surface text-danger active:bg-danger/10",
+        // Confirms an irreversible delete inside a dialog.
+        danger: "bg-danger text-white active:bg-danger/90",
       },
       size: {
         default: "h-11 px-4",

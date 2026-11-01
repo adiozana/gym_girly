@@ -255,7 +255,16 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "is_visible_exercise":
+            "archive_template":
+{ Args: { "p_template_id": string }; Returns: number
+                           },
+"duplicate_template":
+{ Args: { "p_name": string,"p_template_id": string }; Returns: string
+                           },
+"exercise_in_use":
+{ Args: { "p_exercise_id": string }; Returns: boolean
+                           },
+"is_visible_exercise":
 { Args: { "p_exercise_id": string }; Returns: boolean
                            },
 "owns_goal":
@@ -272,6 +281,12 @@ isOneToOne: false
                            },
 "owns_template_exercise":
 { Args: { "p_template_exercise_id": string }; Returns: boolean
+                           },
+"reorder_template_alternatives":
+{ Args: { "p_ids": (string)[],"p_template_exercise_id": string }; Returns: undefined
+                           },
+"reorder_template_exercises":
+{ Args: { "p_ids": (string)[],"p_template_id": string }; Returns: undefined
                            }
           }
           Enums: {

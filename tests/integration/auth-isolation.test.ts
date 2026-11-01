@@ -1,44 +1,7 @@
-// Runs against the local Supabase stack (`supabase start`), never the cloud project:
-// it signs up real users through Supabase Auth and checks that RLS isolates them.
-import { execSync } from "node:child_process";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+// Signs up real users through Supabase Auth and checks that RLS isolates them.
 import { beforeAll, describe, expect, it } from "vitest";
 import { usernameToEmail } from "@/lib/auth/form-state";
-import type { Database } from "@/lib/supabase/database.types";
-
-type Client = SupabaseClient<Database>;
-
-const status = JSON.parse(execSync("supabase status -o json", { encoding: "utf8" })) as {
-  API_URL: string;
-  PUBLISHABLE_KEY: string;
-};
-
-if (!/^http:\/\/(127\.0\.0\.1|localhost)/.test(status.API_URL)) {
-  throw new Error(`Integration tests must run against local Supabase, got ${status.API_URL}`);
-}
-
-const PASSWORD = "integration-test-pw";
-// Unique per run, so tests can repeat without resetting the database.
-const runId = Date.now().toString(36);
-
-function newClient(): Client {
-  return createClient<Database>(status.API_URL, status.PUBLISHABLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-async function signUp(username: string): Promise<{ client: Client; userId: string }> {
-  const client = newClient();
-  const { data, error } = await client.auth.signUp({
-    email: usernameToEmail(username),
-    password: PASSWORD,
-    options: { data: { username } },
-  });
-  if (error) throw error;
-  // Email confirmation is off, so sign-up signs the user in straight away.
-  if (!data.session || !data.user) throw new Error("sign-up returned no session");
-  return { client, userId: data.user.id };
-}
+import { newClient, PASSWORD, runId, signUp, type Client } from "./helpers";
 
 describe("sign-up and per-user isolation", () => {
   const aliceName = `alice_${runId}`;

@@ -10,10 +10,21 @@ SPEC.md defines what each screen does; the skill defines how it looks. Where SPE
 ## Deviations from the skill defaults (from SPEC.md)
 - **UI strings:** one file, `src/lib/strings.ts`, instead of per-feature `copy.ts`.
 - **Folder structure:** SPEC.md's `src/app/(auth)`, `src/app/(app)`, `src/components`, `src/lib/{calc,supabase,validation}` instead of `features/`.
-- **Icons:** Heroicons only. shadcn's `iconLibrary` is still `lucide` in `components.json`; replace lucide icons in any added shadcn component and remove `lucide-react` if it gets installed.
+- **Icons:** Heroicons only. shadcn's `iconLibrary` is still `lucide` in `components.json`; replace lucide icons in any added shadcn component and remove `lucide-react` (and `next-themes`, which the sonner template pulls in) if they get installed.
 
 ## Navigation (SPEC.md)
 - Bottom tab bar, four tabs: בית, תוכניות, היסטוריה, תרגילים. Settings opens from an icon in the home header. Hidden during an active workout.
+- Tab icons (outline, solid when active): Home, ClipboardDocumentList, CalendarDays, BookOpen.
+
+## Terminology (decided with Adi, stage 2)
+- UI says **תוכנית** for a workout template (never "תבנית"); code and DB keep `template`.
+
+## Patterns (decided with Adi, stage 2)
+- **Plan editor:** compact rows (name, "3 × 8–12", number of alternatives, drag handle); tapping a row opens a bottom sheet with all its settings. Reorder by dragging the handle (`@dnd-kit`), with "הזזה למעלה/למטה" in the sheet as the accessible alternative.
+- **Archive:** a toast with "ביטול" right after archiving, and a collapsed "בארכיון (n)" section at the bottom of the list where items can be restored. Applies to plans and personal exercises.
+- **Small deletes** (an exercise from a plan) happen at once with an undo toast; **irreversible deletes** (a personal exercise) use a confirmation dialog with the solid `danger` button.
+- Choice from a short fixed list (muscle group, equipment) → wrapping chips (`ChoiceChips`); a filter row of chips scrolls horizontally.
+- Editor settings save as they change (500ms debounce), with a quiet "שומר / נשמר" line under the sheet title.
 
 ## Open
 - Motion library (`motion`) is in the skill's stack but not in SPEC.md's; decide when the first animated UI is built.
