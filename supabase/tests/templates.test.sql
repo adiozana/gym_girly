@@ -1,10 +1,10 @@
--- Template functions: duplicate, reorder, archive, exercise usage. Run with `supabase test db`.
+-- Template functions: duplicate, reorder, archive, exercise usage, plan weight. Run with `supabase test db`.
 begin;
 create extension if not exists pgtap with schema extensions;
 
 select plan(17);
 
--- Fixtures (as superuser): alice has a 2-exercise template with alternatives and a goal day.
+-- Fixtures (as superuser): alice has a 2-exercise template (one with a current weight) and a goal day.
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'alice@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"alice"}'),
   ('22222222-2222-2222-2222-222222222222', 'bob@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"bob"}');
@@ -12,13 +12,9 @@ insert into auth.users (id, email, aud, role, raw_user_meta_data) values
 insert into public.workout_templates (id, user_id, name) values
   ('aaaaaaaa-0000-4000-8000-0000000000a1', '11111111-1111-1111-1111-111111111111', 'Legs');
 
-insert into public.template_exercises (id, template_id, exercise_id, position, planned_sets, rep_range_min, rep_range_max, note) values
-  ('aaaaaaaa-0000-4000-8000-0000000000b1', 'aaaaaaaa-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000040', 1, 4, 6, 8, 'deep'),
-  ('aaaaaaaa-0000-4000-8000-0000000000b2', 'aaaaaaaa-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000044', 2, 3, null, null, null);
-
-insert into public.template_exercise_alternatives (id, template_exercise_id, exercise_id, position) values
-  ('aaaaaaaa-0000-4000-8000-0000000000c1', 'aaaaaaaa-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-000000000042', 1),
-  ('aaaaaaaa-0000-4000-8000-0000000000c2', 'aaaaaaaa-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-000000000043', 2);
+insert into public.template_exercises (id, template_id, exercise_id, position, planned_sets, rep_range_min, rep_range_max, note, target_weight_kg) values
+  ('aaaaaaaa-0000-4000-8000-0000000000b1', 'aaaaaaaa-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000040', 1, 4, 6, 8, 'deep', 62.5),
+  ('aaaaaaaa-0000-4000-8000-0000000000b2', 'aaaaaaaa-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-000000000044', 2, 3, null, null, null, null);
 
 insert into public.goals (id, user_id, type, training_weekdays, start_date) values
   ('aaaaaaaa-0000-4000-8000-0000000000d1', '11111111-1111-1111-1111-111111111111', 'fixed_days', '{0,2,4}', '2026-10-01');
@@ -34,6 +30,10 @@ select throws_ok(
 select throws_ok(
   $$update public.template_exercises set rep_range_min = 0 where id = 'aaaaaaaa-0000-4000-8000-0000000000b1'$$,
   '23514', null, 'rep range values start at 1'
+);
+select throws_ok(
+  $$update public.template_exercises set target_weight_kg = -1 where id = 'aaaaaaaa-0000-4000-8000-0000000000b1'$$,
+  '23514', null, 'the current weight cannot be negative'
 );
 
 -- ---------------------------------------------------------------------------
@@ -70,18 +70,16 @@ select is(
   'Legs (copy)', 'duplicate creates a template with the given name'
 );
 select results_eq(
-  $$select exercise_id, position, planned_sets, rep_range_min, rep_range_max, note
+  $$select exercise_id, position, planned_sets, rep_range_min, rep_range_max, note, target_weight_kg
     from public.template_exercises where template_id = (select id from copy) order by position$$,
-  $$select exercise_id, position, planned_sets, rep_range_min, rep_range_max, note
+  $$select exercise_id, position, planned_sets, rep_range_min, rep_range_max, note, target_weight_kg
     from public.template_exercises where template_id = 'aaaaaaaa-0000-4000-8000-0000000000a1' order by position$$,
   'duplicate copies every exercise with its settings'
 );
-select results_eq(
-  $$select a.exercise_id, a.position from public.template_exercise_alternatives a
-    join public.template_exercises te on te.id = a.template_exercise_id
-    where te.template_id = (select id from copy) order by a.position$$,
-  $$values ('00000000-0000-4000-8000-000000000042'::uuid, 1), ('00000000-0000-4000-8000-000000000043'::uuid, 2)$$,
-  'duplicate copies the alternatives in order'
+select is(
+  (select target_weight_kg from public.template_exercises
+   where template_id = (select id from copy) and position = 1),
+  62.50::numeric, 'duplicate copies the current weight'
 );
 select is(
   (select count(*)::int from public.template_exercises where template_id = 'aaaaaaaa-0000-4000-8000-0000000000a1'),
@@ -106,18 +104,8 @@ select throws_ok(
   '22023', null, 'reorder rejects a partial list'
 );
 
--- reorder alternatives
-select public.reorder_template_alternatives('aaaaaaaa-0000-4000-8000-0000000000b1',
-  array['aaaaaaaa-0000-4000-8000-0000000000c2','aaaaaaaa-0000-4000-8000-0000000000c1']::uuid[]);
-select results_eq(
-  $$select id from public.template_exercise_alternatives
-    where template_exercise_id = 'aaaaaaaa-0000-4000-8000-0000000000b1' order by position$$,
-  $$values ('aaaaaaaa-0000-4000-8000-0000000000c2'::uuid), ('aaaaaaaa-0000-4000-8000-0000000000c1'::uuid)$$,
-  'reorder alternatives sets the new priority'
-);
-
 -- exercise usage
-select ok(public.exercise_in_use('00000000-0000-4000-8000-000000000042'), 'an alternative counts as in use');
+select ok(public.exercise_in_use('00000000-0000-4000-8000-000000000044'), 'an exercise in a template is in use');
 select ok(not public.exercise_in_use('00000000-0000-4000-8000-000000000001'), 'an unused exercise is not in use');
 
 -- archive

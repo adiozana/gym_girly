@@ -37,6 +37,32 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"exercise_alternatives": {
+                  Row: {
+                    "alternative_exercise_id": string,"exercise_id": string,"position": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "alternative_exercise_id": string,"exercise_id": string,"position": number
+                  }
+                  Update: {
+                    "alternative_exercise_id"?: string,"exercise_id"?: string,"position"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "exercise_alternatives_alternative_exercise_id_fkey"
+      columns: ["alternative_exercise_id"]
+isOneToOne: false
+      referencedRelation: "exercises"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "exercise_alternatives_exercise_id_fkey"
+      columns: ["exercise_id"]
+isOneToOne: false
+      referencedRelation: "exercises"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"exercises": {
                   Row: {
                     "created_at": string,"equipment": Database["public"]['Enums']["equipment"],"id": string,"instructions_he": string | null,"is_archived": boolean,"muscle_group": Database["public"]['Enums']["muscle_group"],"name_en": string | null,"name_he": string,"user_id": string | null
@@ -163,42 +189,16 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"template_exercise_alternatives": {
-                  Row: {
-                    "exercise_id": string,"id": string,"position": number,"template_exercise_id": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "exercise_id": string,"id"?: string,"position": number,"template_exercise_id": string
-                  }
-                  Update: {
-                    "exercise_id"?: string,"id"?: string,"position"?: number,"template_exercise_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "template_exercise_alternatives_exercise_id_fkey"
-      columns: ["exercise_id"]
-isOneToOne: false
-      referencedRelation: "exercises"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "template_exercise_alternatives_template_exercise_id_fkey"
-      columns: ["template_exercise_id"]
-isOneToOne: false
-      referencedRelation: "template_exercises"
-      referencedColumns: ["id"]
-    }
-                  ]
                 },"template_exercises": {
                   Row: {
-                    "exercise_id": string,"id": string,"note": string | null,"planned_sets": number,"position": number,"rep_range_max": number | null,"rep_range_min": number | null,"template_id": string
+                    "exercise_id": string,"id": string,"note": string | null,"planned_sets": number,"position": number,"rep_range_max": number | null,"rep_range_min": number | null,"target_weight_kg": number | null,"template_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "exercise_id": string,"id"?: string,"note"?: string | null,"planned_sets"?: number,"position": number,"rep_range_max"?: number | null,"rep_range_min"?: number | null,"template_id": string
+                    "exercise_id": string,"id"?: string,"note"?: string | null,"planned_sets"?: number,"position": number,"rep_range_max"?: number | null,"rep_range_min"?: number | null,"target_weight_kg"?: number | null,"template_id": string
                   }
                   Update: {
-                    "exercise_id"?: string,"id"?: string,"note"?: string | null,"planned_sets"?: number,"position"?: number,"rep_range_max"?: number | null,"rep_range_min"?: number | null,"template_id"?: string
+                    "exercise_id"?: string,"id"?: string,"note"?: string | null,"planned_sets"?: number,"position"?: number,"rep_range_max"?: number | null,"rep_range_min"?: number | null,"target_weight_kg"?: number | null,"template_id"?: string
                   }
                   Relationships: [
                     {
@@ -273,6 +273,9 @@ isOneToOne: false
 "is_visible_exercise":
 { Args: { "p_exercise_id": string }; Returns: boolean
                            },
+"owns_exercise":
+{ Args: { "p_exercise_id": string }; Returns: boolean
+                           },
 "owns_goal":
 { Args: { "p_goal_id": string }; Returns: boolean
                            },
@@ -299,11 +302,14 @@ isOneToOne: false
 "reorder_session_exercises":
 { Args: { "p_ids": (string)[],"p_session_id": string }; Returns: undefined
                            },
-"reorder_template_alternatives":
-{ Args: { "p_ids": (string)[],"p_template_exercise_id": string }; Returns: undefined
-                           },
 "reorder_template_exercises":
 { Args: { "p_ids": (string)[],"p_template_id": string }; Returns: undefined
+                           },
+"save_session_exercise_sets":
+{ Args: { "p_is_done": boolean,"p_reps": number,"p_session_exercise_id": string,"p_set_ids": (string)[],"p_weight_kg": number }; Returns: undefined
+                           },
+"set_exercise_alternatives":
+{ Args: { "p_exercise_id": string,"p_ids": (string)[] }; Returns: undefined
                            },
 "set_goal":
 { Args: { "p_cycle_off": number,"p_cycle_on": number,"p_day_templates": Json,"p_today": string,"p_training_weekdays": (number)[],"p_type": Database["public"]['Enums']["goal_type"] }; Returns: string

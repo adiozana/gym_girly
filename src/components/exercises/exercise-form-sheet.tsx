@@ -7,8 +7,10 @@ import { Sheet } from "@/components/shared/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createExercise, updateExercise } from "@/lib/exercises/actions";
-import { EQUIPMENT, MUSCLE_GROUPS, type Equipment, type MuscleGroup } from "@/lib/exercises/types";
+import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ExercisePicker } from "@/components/exercises/exercise-picker";
+import { createExercise, setExerciseAlternatives, updateExercise } from "@/lib/exercises/actions";
+import { EQUIPMENT, MUSCLE_GROUPS, type Equipment, type ExerciseSummary, type MuscleGroup } from "@/lib/exercises/types";
 import { strings } from "@/lib/strings";
 import { exerciseInputSchema } from "@/lib/validation/exercises";
 
@@ -36,11 +38,24 @@ type ExerciseFormSheetProps = {
   // When set, the sheet edits this exercise; otherwise it creates a new one.
   exerciseId?: string;
   initialValues?: ExerciseFormValues;
+  initialAlternatives?: ExerciseSummary[];
+  // The library, for choosing the 2 alternatives.
+  exercises: ExerciseSummary[];
   onCreated?: (id: string) => void;
 };
 
-export function ExerciseFormSheet({ open, onOpenChange, exerciseId, initialValues, onCreated }: ExerciseFormSheetProps) {
+export function ExerciseFormSheet({
+  open,
+  onOpenChange,
+  exerciseId,
+  initialValues,
+  initialAlternatives = [],
+  exercises,
+  onCreated,
+}: ExerciseFormSheetProps) {
   const [values, setValues] = useState(initialValues ?? emptyValues);
+  const [alternatives, setAlternatives] = useState(initialAlternatives);
+  const [pickingAlternative, setPickingAlternative] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
@@ -53,6 +68,7 @@ export function ExerciseFormSheet({ open, onOpenChange, exerciseId, initialValue
     // Each opening starts from the saved values.
     if (next) {
       setValues(initialValues ?? emptyValues);
+      setAlternatives(initialAlternatives);
       setErrors({});
     }
     onOpenChange(next);
@@ -75,6 +91,12 @@ export function ExerciseFormSheet({ open, onOpenChange, exerciseId, initialValue
         if (result.fieldErrors) setErrors(result.fieldErrors);
         else toast.error(result.error);
         return;
+      }
+      const id = exerciseId ?? result.data?.id;
+      const ids = alternatives.map((alt) => alt.id);
+      if (id && ids.join() !== initialAlternatives.map((alt) => alt.id).join()) {
+        const saved = await setExerciseAlternatives(id, ids);
+        if (!saved.ok) toast.error(saved.error);
       }
       onOpenChange(false);
       if (result.data) onCreated?.(result.data.id);
@@ -149,6 +171,39 @@ export function ExerciseFormSheet({ open, onOpenChange, exerciseId, initialValue
           error={errors.equipment}
         />
 
+        <section className="flex flex-col gap-2" aria-labelledby="exercise-alternatives-title">
+          <div className="flex flex-col">
+            <h3 id="exercise-alternatives-title" className="text-label font-medium">
+              {form.alternatives} <span className="font-normal text-ink-muted">({strings.common.optional})</span>
+            </h3>
+            <p className="text-caption text-ink-muted">{form.alternativesHint}</p>
+          </div>
+          {alternatives.length > 0 && (
+            <ol className="divide-y divide-hairline rounded-md border border-hairline">
+              {alternatives.map((alternative) => (
+                <li key={alternative.id} className="flex items-center gap-2 ps-4">
+                  <span className="min-w-0 flex-1 py-3 wrap-break-word">{alternative.name_he}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={form.removeAlternative(alternative.name_he)}
+                    onClick={() => setAlternatives((prev) => prev.filter((alt) => alt.id !== alternative.id))}
+                  >
+                    <XMarkIcon aria-hidden="true" />
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          )}
+          {alternatives.length < 2 && (
+            <Button type="button" variant="link" className="self-start px-0" onClick={() => setPickingAlternative(true)}>
+              <PlusIcon aria-hidden="true" />
+              {form.addAlternative}
+            </Button>
+          )}
+        </section>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor="exercise-instructions">
             {form.instructions} <span className="font-normal text-ink-muted">({strings.common.optional})</span>
@@ -167,6 +222,14 @@ export function ExerciseFormSheet({ open, onOpenChange, exerciseId, initialValue
           </p>
         </div>
       </form>
+      <ExercisePicker
+        open={pickingAlternative}
+        onOpenChange={setPickingAlternative}
+        title={form.addAlternative}
+        exercises={exercises}
+        excludeIds={[...(exerciseId ? [exerciseId] : []), ...alternatives.map((alt) => alt.id)]}
+        onSelect={(exercise) => setAlternatives((prev) => [...prev, exercise].slice(0, 2))}
+      />
     </Sheet>
   );
 }

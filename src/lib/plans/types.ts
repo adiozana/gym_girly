@@ -7,12 +7,6 @@ export type TemplateSummary = {
   exercise_count: number;
 };
 
-export type TemplateAlternative = {
-  id: string;
-  position: number;
-  exercise: ExerciseSummary;
-};
-
 export type TemplateExerciseItem = {
   id: string;
   position: number;
@@ -20,8 +14,8 @@ export type TemplateExerciseItem = {
   rep_range_min: number | null;
   rep_range_max: number | null;
   note: string | null;
+  target_weight_kg: number | null;
   exercise: ExerciseSummary;
-  alternatives: TemplateAlternative[];
 };
 
 export type TemplateDetail = {

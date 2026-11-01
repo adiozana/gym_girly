@@ -23,10 +23,8 @@ export const emptyQueue: QueueState = { pending: [], inFlight: [] };
 
 export function opKey(op: WorkoutOp): string {
   switch (op.kind) {
-    case "upsertSet":
-      return `set:${op.set.id}`;
-    case "deleteSet":
-      return `set:${op.id}`;
+    case "saveSets":
+      return `sets:${op.sets.sessionExerciseId}`;
     case "upsertExercise":
       return `exercise:${op.exercise.id}`;
     case "deleteExercise":
@@ -35,9 +33,7 @@ export function opKey(op: WorkoutOp): string {
 }
 
 function exerciseOfSetOp(op: WorkoutOp): string | null {
-  if (op.kind === "upsertSet") return op.set.session_exercise_id;
-  if (op.kind === "deleteSet") return op.sessionExerciseId;
-  return null;
+  return op.kind === "saveSets" ? op.sets.sessionExerciseId : null;
 }
 
 function addToPending(pending: readonly QueuedOp[], item: QueuedOp): QueuedOp[] {

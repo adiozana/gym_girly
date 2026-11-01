@@ -13,7 +13,7 @@ describe("templateNameSchema", () => {
 });
 
 describe("templateExerciseSettingsSchema", () => {
-  const base = { planned_sets: 3, rep_range_min: null, rep_range_max: null, note: "" };
+  const base = { planned_sets: 3, rep_range_min: null, rep_range_max: null, note: "", target_weight_kg: null };
 
   it("accepts settings without a rep range and turns an empty note into null", () => {
     expect(templateExerciseSettingsSchema.parse(base)).toEqual({ ...base, note: null });

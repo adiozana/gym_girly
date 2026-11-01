@@ -46,6 +46,7 @@ export function ExerciseLibrary({ active, archived }: { active: ExerciseSummary[
         </ul>
       </ArchivedSection>
       <ExerciseFormSheet
+        exercises={active}
         open={creating}
         onOpenChange={setCreating}
         onCreated={(id) => router.push(`/exercises/${id}`)}

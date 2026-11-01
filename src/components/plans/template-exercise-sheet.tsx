@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  MinusIcon,
-  PlusIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowDownIcon, ArrowUpIcon, MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 import type { EditorItem } from "@/components/plans/sortable-exercise-row";
 import { Sheet } from "@/components/shared/sheet";
@@ -18,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { parseRepInput } from "@/lib/plans/rep-input";
 import { strings } from "@/lib/strings";
 import type { TemplateExerciseSettings } from "@/lib/validation/plans";
+import { formatWeight, parseWeight, sanitizeWeightInput } from "@/lib/workout/set-input";
 
 const { editor } = strings.plans;
 
@@ -33,9 +26,6 @@ type TemplateExerciseSheetProps = {
   onChange: (settings: Partial<TemplateExerciseSettings>) => void;
   onMove: (delta: -1 | 1) => void;
   onRemove: () => void;
-  onAddAlternative: () => void;
-  onRemoveAlternative: (alternativeId: string) => void;
-  onMoveAlternative: (alternativeId: string, delta: -1 | 1) => void;
 };
 
 // Settings of one exercise in the plan. Changes apply immediately; the editor saves them.
@@ -50,13 +40,18 @@ export function TemplateExerciseSheet({
   onChange,
   onMove,
   onRemove,
-  onAddAlternative,
-  onRemoveAlternative,
-  onMoveAlternative,
 }: TemplateExerciseSheetProps) {
   const [repMin, setRepMin] = useState(item.rep_range_min?.toString() ?? "");
   const [repMax, setRepMax] = useState(item.rep_range_max?.toString() ?? "");
   const [repError, setRepError] = useState("");
+  const [weight, setWeight] = useState(item.target_weight_kg == null ? "" : formatWeight(item.target_weight_kg));
+
+  function changeWeight(text: string) {
+    const clean = sanitizeWeightInput(text);
+    if (clean === null) return;
+    setWeight(clean);
+    onChange({ target_weight_kg: parseWeight(clean) });
+  }
 
   function changeReps(minText: string, maxText: string) {
     setRepMin(minText);
@@ -126,6 +121,27 @@ export function TemplateExerciseSheet({
           </div>
         </div>
 
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="template-exercise-weight">
+            {editor.weight} <span className="font-normal text-ink-muted">({strings.common.optional})</span>
+          </Label>
+          <div className="flex items-center gap-3">
+            <Input
+              id="template-exercise-weight"
+              inputMode="decimal"
+              dir="ltr"
+              value={weight}
+              onChange={(event) => changeWeight(event.target.value)}
+              aria-describedby="template-exercise-weight-hint"
+              className="max-w-32 text-center tabular-nums"
+            />
+            <span className="text-ink-muted">{editor.weightUnit}</span>
+          </div>
+          <p id="template-exercise-weight-hint" className="text-caption text-ink-muted">
+            {editor.weightHint}
+          </p>
+        </div>
+
         {/* Rep range: optional; one value means an exact count */}
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-2 text-label font-medium">{editor.repRange}</legend>
@@ -173,59 +189,6 @@ export function TemplateExerciseSheet({
           />
         </div>
 
-        <section className="flex flex-col gap-2">
-          <div className="flex flex-col">
-            <h3 className="text-label font-medium">{editor.alternatives}</h3>
-            <p className="text-caption text-ink-muted">{editor.alternativesHint}</p>
-          </div>
-          {item.alternatives.length === 0 ? (
-            <p className="py-2 text-ink-muted">{editor.noAlternatives}</p>
-          ) : (
-            <ol className="divide-y divide-hairline rounded-md border border-hairline">
-              {item.alternatives.map((alternative, index) => {
-                const pending = alternative.id.startsWith("temp-");
-                const name = alternative.exercise.name_he;
-                return (
-                  <li key={alternative.id} className="flex items-center gap-1 ps-3">
-                    <span className="w-5 shrink-0 text-caption text-ink-muted tabular-nums">{index + 1}</span>
-                    <span className="min-w-0 flex-1 py-3 wrap-break-word">{name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={editor.moveAlternativeUp(name)}
-                      disabled={pending || index === 0}
-                      onClick={() => onMoveAlternative(alternative.id, -1)}
-                    >
-                      <ChevronUpIcon aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={editor.moveAlternativeDown(name)}
-                      disabled={pending || index === item.alternatives.length - 1}
-                      onClick={() => onMoveAlternative(alternative.id, 1)}
-                    >
-                      <ChevronDownIcon aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label={editor.removeAlternativeNamed(name)}
-                      disabled={pending}
-                      onClick={() => onRemoveAlternative(alternative.id)}
-                    >
-                      <XMarkIcon aria-hidden="true" />
-                    </Button>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-          <Button variant="link" className="self-start px-0" onClick={onAddAlternative}>
-            <PlusIcon aria-hidden="true" />
-            {editor.addAlternative}
-          </Button>
-        </section>
       </div>
     </Sheet>
   );

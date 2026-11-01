@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { PlannedSets } from "@/components/plans/planned-sets";
 import type { TemplateExerciseItem } from "@/lib/plans/types";
 import { strings } from "@/lib/strings";
+import { formatWeight } from "@/lib/workout/set-input";
 
 const { editor } = strings.plans;
 
@@ -50,7 +51,12 @@ export function SortableExerciseRow({ item, onOpen }: { item: EditorItem; onOpen
         <span className="font-medium wrap-break-word">{item.exercise.name_he}</span>
         <span className="text-caption text-ink-muted">
           <PlannedSets sets={item.planned_sets} repMin={item.rep_range_min} repMax={item.rep_range_max} />
-          {item.alternatives.length > 0 && <> · {editor.alternativeCount(item.alternatives.length)}</>}
+          {item.target_weight_kg != null && (
+            <>
+              {" · "}
+              <bdi>{editor.weightValue(formatWeight(item.target_weight_kg))}</bdi>
+            </>
+          )}
         </span>
       </button>
     </li>

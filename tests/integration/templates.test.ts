@@ -1,4 +1,4 @@
-// Stage 2 acceptance: a template with 5 exercises, rep ranges and alternatives, reordered,
+// Stage 2 acceptance: a template with 5 exercises, rep ranges and plan weights, reordered,
 // plus duplicate/archive and personal-exercise rules, as a real signed-in user.
 import { beforeAll, describe, expect, it } from "vitest";
 import { builtIn, runId, signUp, type Client } from "./helpers";
@@ -23,7 +23,7 @@ describe("templates", () => {
     templateId = data.id;
   });
 
-  it("builds a template with 5 exercises, rep ranges and alternatives", async () => {
+  it("builds a template with 5 exercises, rep ranges and a plan weight", async () => {
     // squat, leg press, RDL, leg extension, lying leg curl
     const exercises = [40, 42, 47, 44, 45].map(builtIn);
     const ranges: [number, number][] = [[6, 8], [10, 15], [8, 10], [12, 15], [10, 12]];
@@ -38,27 +38,21 @@ describe("templates", () => {
           planned_sets: 3 + (i % 2),
           rep_range_min: ranges[i][0],
           rep_range_max: ranges[i][1],
+          target_weight_kg: i === 0 ? 82.5 : null,
         })),
       )
       .select("id, position");
     if (error) throw error;
     teIds = data.sort((a, b) => a.position - b.position).map((row) => row.id);
 
-    // Squat: smith machine squat and hack squat as alternatives, in priority order.
-    const alternatives = await alice.from("template_exercise_alternatives").insert([
-      { template_exercise_id: teIds[0], exercise_id: builtIn(53), position: 1 },
-      { template_exercise_id: teIds[0], exercise_id: builtIn(43), position: 2 },
-    ]);
-    expect(alternatives.error).toBeNull();
-
     const { data: saved } = await alice
       .from("template_exercises")
-      .select("rep_range_min, rep_range_max, template_exercise_alternatives(exercise_id)")
+      .select("rep_range_min, rep_range_max, target_weight_kg")
       .eq("template_id", templateId)
       .order("position");
     expect(saved).toHaveLength(5);
     expect(saved?.map((r) => [r.rep_range_min, r.rep_range_max])).toEqual(ranges);
-    expect(saved?.[0].template_exercise_alternatives).toHaveLength(2);
+    expect(saved?.map((r) => (r.target_weight_kg == null ? null : Number(r.target_weight_kg)))).toEqual([82.5, null, null, null, null]);
   });
 
   it("rejects an invalid rep range", async () => {
@@ -69,7 +63,7 @@ describe("templates", () => {
     expect(error?.code).toBe("23514");
   });
 
-  it("reorders exercises and alternatives", async () => {
+  it("reorders exercises", async () => {
     const newOrder = [teIds[4], teIds[0], teIds[1], teIds[2], teIds[3]];
     const { error } = await alice.rpc("reorder_template_exercises", {
       p_template_id: templateId,
@@ -83,26 +77,9 @@ describe("templates", () => {
       .eq("template_id", templateId)
       .order("position");
     expect(data?.map((r) => r.id)).toEqual(newOrder);
-
-    const alts = await alice
-      .from("template_exercise_alternatives")
-      .select("id, exercise_id")
-      .eq("template_exercise_id", teIds[0])
-      .order("position");
-    const reversed = [...(alts.data ?? [])].reverse();
-    await alice.rpc("reorder_template_alternatives", {
-      p_template_exercise_id: teIds[0],
-      p_ids: reversed.map((a) => a.id),
-    });
-    const after = await alice
-      .from("template_exercise_alternatives")
-      .select("exercise_id")
-      .eq("template_exercise_id", teIds[0])
-      .order("position");
-    expect(after.data?.map((a) => a.exercise_id)).toEqual([builtIn(43), builtIn(53)]);
   });
 
-  it("duplicates a template with its exercises and alternatives", async () => {
+  it("duplicates a template with its exercises and plan weights", async () => {
     const { data: copyId, error } = await alice.rpc("duplicate_template", {
       p_template_id: templateId,
       p_name: "רגליים (עותק)",
@@ -111,11 +88,11 @@ describe("templates", () => {
 
     const { data } = await alice
       .from("template_exercises")
-      .select("exercise_id, template_exercise_alternatives(exercise_id)")
+      .select("exercise_id, target_weight_kg, position")
       .eq("template_id", copyId!)
       .order("position");
     expect(data).toHaveLength(5);
-    expect(data?.flatMap((r) => r.template_exercise_alternatives)).toHaveLength(2);
+    expect(data?.map((r) => (r.target_weight_kg == null ? null : Number(r.target_weight_kg)))).toEqual([null, 82.5, null, null, null]);
   });
 
   it("keeps other users out", async () => {
@@ -187,5 +164,54 @@ describe("personal exercises", () => {
     expect(update.data).toEqual([]);
     const del = await alice.from("exercises").delete().eq("id", builtIn(1)).select("id");
     expect(del.data).toEqual([]);
+  });
+});
+
+describe("exercise alternatives", () => {
+  let alice: Client;
+  let aliceId: string;
+
+  beforeAll(async () => {
+    ({ client: alice, userId: aliceId } = await signUp(`alt_alice_${runId}`));
+  });
+
+  it("gives every built-in exercise 2 alternatives", async () => {
+    const { data, error } = await alice
+      .from("exercise_alternatives")
+      .select("alternative_exercise_id, position")
+      .eq("exercise_id", builtIn(1))
+      .order("position");
+    expect(error).toBeNull();
+    expect(data).toHaveLength(2);
+    expect(data?.map((r) => r.position)).toEqual([1, 2]);
+
+    const { data: all } = await alice.from("exercise_alternatives").select("exercise_id").limit(1000);
+    const perExercise = new Map<string, number>();
+    for (const row of all ?? []) perExercise.set(row.exercise_id, (perExercise.get(row.exercise_id) ?? 0) + 1);
+    expect([...perExercise.values()].every((n) => n === 2)).toBe(true);
+  });
+
+  it("lets a user set alternatives for their own exercise, but not for a built-in", async () => {
+    const own = await alice
+      .from("exercises")
+      .insert({ user_id: aliceId, name_he: "תרגיל אישי", muscle_group: "chest", equipment: "other" })
+      .select("id")
+      .single();
+    if (own.error) throw own.error;
+
+    const set = await alice.rpc("set_exercise_alternatives", {
+      p_exercise_id: own.data.id,
+      p_ids: [builtIn(1), builtIn(2)],
+    });
+    expect(set.error).toBeNull();
+    const saved = await alice
+      .from("exercise_alternatives")
+      .select("alternative_exercise_id")
+      .eq("exercise_id", own.data.id)
+      .order("position");
+    expect(saved.data?.map((r) => r.alternative_exercise_id)).toEqual([builtIn(1), builtIn(2)]);
+
+    const builtInSet = await alice.rpc("set_exercise_alternatives", { p_exercise_id: builtIn(1), p_ids: [builtIn(5)] });
+    expect(builtInSet.error?.code).toBe("P0002");
   });
 });

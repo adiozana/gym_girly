@@ -5,7 +5,7 @@ import type { WorkoutCard } from "./types";
 // a lost connection never loses it (SPEC.md "לא מאבדים נתונים"). It holds the ops still to
 // send and the screen's state at that moment; it exists only while something is unsaved.
 
-const VERSION = 1;
+const VERSION = 2;
 const PREFIX = "gym-girly:workout:";
 
 export type WorkoutDraft = { ops: WorkoutOp[]; cards: WorkoutCard[] };

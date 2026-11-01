@@ -25,6 +25,14 @@ export const templateExerciseSettingsSchema = z
     rep_range_min: repValue,
     rep_range_max: repValue,
     note: optionalText(300, editor.noteTooLong),
+    // The weight currently lifted; the workout suggests it and saving a workout updates it.
+    target_weight_kg: z
+      .number({ error: editor.weightInvalid })
+      .min(0, { error: editor.weightInvalid })
+      .max(9999.99, { error: editor.weightInvalid })
+      // At most two decimals (e.g. 1.25).
+      .refine((value) => Math.abs(value * 100 - Math.round(value * 100)) < 1e-6, { error: editor.weightInvalid })
+      .nullable(),
   })
   .transform((settings) => {
     const { rep_range_min: min, rep_range_max: max } = settings;

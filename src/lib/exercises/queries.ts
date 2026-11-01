@@ -46,7 +46,27 @@ export type ExerciseDetail = ExerciseSummary & {
   instructions_he: string | null;
   is_archived: boolean;
   in_use: boolean;
+  alternatives: ExerciseSummary[];
 };
+
+// The 2 fixed alternatives of each exercise (SPEC.md), in order, keyed by exercise id.
+export async function getAlternatives(exerciseIds: readonly string[]): Promise<Map<string, ExerciseSummary[]>> {
+  const result = new Map<string, ExerciseSummary[]>();
+  if (exerciseIds.length === 0) return result;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("exercise_alternatives")
+    .select(`exercise_id, position, alternative:exercises!alternative_exercise_id (${EXERCISE_SUMMARY_COLUMNS})`)
+    .in("exercise_id", [...new Set(exerciseIds)])
+    .order("position");
+  if (error) throw error;
+  for (const row of data) {
+    const list = result.get(row.exercise_id) ?? [];
+    list.push(toSummary(row.alternative));
+    result.set(row.exercise_id, list);
+  }
+  return result;
+}
 
 export async function getExercise(id: string): Promise<ExerciseDetail | null> {
   await getCurrentUser();
@@ -59,17 +79,17 @@ export async function getExercise(id: string): Promise<ExerciseDetail | null> {
   if (error) throw error;
   if (!data) return null;
 
-  let inUse = false;
-  if (data.user_id !== null) {
-    const usage = await supabase.rpc("exercise_in_use", { p_exercise_id: id });
-    if (usage.error) throw usage.error;
-    inUse = usage.data;
-  }
+  const [usage, alternatives] = await Promise.all([
+    data.user_id !== null ? supabase.rpc("exercise_in_use", { p_exercise_id: id }) : null,
+    getAlternatives([id]),
+  ]);
+  if (usage?.error) throw usage.error;
 
   return {
     ...toSummary(data),
     instructions_he: data.instructions_he,
     is_archived: data.is_archived,
-    in_use: inUse,
+    in_use: usage?.data ?? false,
+    alternatives: alternatives.get(id) ?? [],
   };
 }

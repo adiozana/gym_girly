@@ -37,12 +37,8 @@ export async function getTemplate(id: string): Promise<TemplateDetail | null> {
     .select(
       `id, name, is_archived,
        template_exercises (
-         id, position, planned_sets, rep_range_min, rep_range_max, note,
-         exercise:exercises (${EXERCISE_SUMMARY_COLUMNS}),
-         template_exercise_alternatives (
-           id, position,
-           exercise:exercises (${EXERCISE_SUMMARY_COLUMNS})
-         )
+         id, position, planned_sets, rep_range_min, rep_range_max, note, target_weight_kg,
+         exercise:exercises (${EXERCISE_SUMMARY_COLUMNS})
        )`,
     )
     .eq("id", id)
@@ -61,12 +57,8 @@ export async function getTemplate(id: string): Promise<TemplateDetail | null> {
       rep_range_min: te.rep_range_min,
       rep_range_max: te.rep_range_max,
       note: te.note,
+      target_weight_kg: te.target_weight_kg,
       exercise: toSummary(te.exercise),
-      alternatives: te.template_exercise_alternatives.sort(byPosition).map((alt) => ({
-        id: alt.id,
-        position: alt.position,
-        exercise: toSummary(alt.exercise),
-      })),
     })),
   };
 }

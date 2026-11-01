@@ -20,7 +20,7 @@ SPEC.md defines what each screen does; the skill defines how it looks. Where SPE
 - UI says **תוכנית** for a workout template (never "תבנית"); code and DB keep `template`.
 
 ## Patterns (decided with Adi, stage 2)
-- **Plan editor:** compact rows (name, "3 × 8–12", number of alternatives, drag handle); tapping a row opens a bottom sheet with all its settings. Reorder by dragging the handle (`@dnd-kit`), with "הזזה למעלה/למטה" in the sheet as the accessible alternative.
+- **Plan editor:** compact rows (name, "3 × 8–12", current weight, drag handle); tapping a row opens a bottom sheet with all its settings. Reorder by dragging the handle (`@dnd-kit`), with "הזזה למעלה/למטה" in the sheet as the accessible alternative.
 - **Archive:** a toast with "ביטול" right after archiving, and a collapsed "בארכיון (n)" section at the bottom of the list where items can be restored. Applies to plans and personal exercises.
 - **Small deletes** (an exercise from a plan) happen at once with an undo toast; **irreversible deletes** (a personal exercise) use a confirmation dialog with the solid `danger` button.
 - Choice from a short fixed list (muscle group, equipment) → wrapping chips (`ChoiceChips`); a filter row of chips scrolls horizontally.
@@ -28,8 +28,8 @@ SPEC.md defines what each screen does; the skill defines how it looks. Where SPE
 
 ## Patterns (stage 3, active workout)
 - **Workout screen:** sticky glass header (back home, name, elapsed time, quiet "שומר / נשמר", "לא נשמר · ניסיון חוזר" in `warning`) and a sticky glass bottom bar ("הוספת תרגיל" outline, "שמירת אימון" primary). Bottom tab bar hidden.
-- **Set row:** number · weight · reps · 48px done toggle. Suggestions from last time are placeholders in `ink-muted`; entered values are `font-medium ink`. Done = `success` toggle with a white check on a `success/10` row.
-- **Exercise card:** tapping the name opens the details sheet (instructions, alternatives, last time); everything else is in the card's overflow menu. Removing a card or the last set is undone from a toast.
+- **Exercise row:** compact row, not a card: name (tap opens the accordion), small "3 × 8–12", ONE weight field, ONE reps field, and a 48px done toggle. Suggestions are placeholders in `ink-muted`; entered values are `font-medium ink`. Done = `success` toggle with a white check on a `success/10` row; tapping again un-marks.
+- **Accordion:** opens downward under the row via a `grid-rows-[0fr]` → `grid-rows-[1fr]` transition; one open at a time. Contains instructions, the 2 alternatives (swap/add), last time, sets −/+, note, move up/down and remove. Removing an exercise is undone from a toast.
 
 ## Open
 - Motion library (`motion`) is in the skill's stack but not in SPEC.md's; decide when the first animated UI is built.

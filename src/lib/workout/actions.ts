@@ -14,7 +14,8 @@ import {
   workoutOpsSchema,
   type WorkoutOp,
 } from "@/lib/validation/workout";
-import { fetchPreviousPerformance } from "./queries";
+import { fetchAlternatives, fetchPreviousPerformance } from "./queries";
+import type { ExerciseInfo } from "./types";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type DbError = { code?: string } | null;
@@ -98,13 +99,18 @@ function isPermanent(error: DbError): boolean {
 
 async function applyOp(supabase: Supabase, sessionId: string, op: WorkoutOp): Promise<DbError> {
   switch (op.kind) {
-    case "upsertSet": {
-      const { error } = await supabase.from("session_sets").upsert(op.set, { onConflict: "id" });
-      return error;
-    }
-    case "deleteSet": {
-      const { error } = await supabase.rpc("delete_session_set", { p_set_id: op.id });
-      // Already gone (e.g. the op is replayed after a reload): nothing left to do.
+    case "saveSets": {
+      const { sessionExerciseId, setIds, weight_kg, reps, is_done } = op.sets;
+      // The generated types mark the numbers as non-null; null means "not entered".
+      const args = {
+        p_session_exercise_id: sessionExerciseId,
+        p_set_ids: setIds,
+        p_weight_kg: weight_kg ?? null,
+        p_reps: reps ?? null,
+        p_is_done: is_done,
+      } as { p_session_exercise_id: string; p_set_ids: string[]; p_weight_kg: number; p_reps: number; p_is_done: boolean };
+      const { error } = await supabase.rpc("save_session_exercise_sets", args);
+      // The exercise is gone (removed, or the op is replayed after a reload): nothing to do.
       return error?.code === "P0002" ? null : error;
     }
     case "upsertExercise": {
@@ -165,19 +171,23 @@ export async function applyWorkoutOps(sessionId: unknown, ops: unknown): Promise
 export async function getExerciseContext(
   exerciseId: unknown,
   excludeSessionId: unknown,
-): Promise<ActionResult<{ instructions_he: string | null; previous: PreviousPerformance | null }>> {
+): Promise<
+  ActionResult<{ instructions_he: string | null; previous: PreviousPerformance | null; alternatives: ExerciseInfo[] }>
+> {
   await getCurrentUser();
   const parsed = exerciseContextSchema.safeParse({ exerciseId, excludeSessionId });
   if (!parsed.success) return fail();
 
   const supabase = await createClient();
-  const [exercise, previous] = await Promise.all([
+  const [exercise, previous, alternatives] = await Promise.all([
     supabase.from("exercises").select("instructions_he").eq("id", parsed.data.exerciseId).maybeSingle(),
     fetchPreviousPerformance(supabase, [parsed.data.exerciseId], parsed.data.excludeSessionId).catch(() => null),
+    fetchAlternatives(supabase, [parsed.data.exerciseId]).catch(() => null),
   ]);
-  if (exercise.error || !exercise.data || !previous) return fail();
+  if (exercise.error || !exercise.data || !previous || !alternatives) return fail();
   return ok({
     instructions_he: exercise.data.instructions_he,
     previous: previous.get(parsed.data.exerciseId) ?? null,
+    alternatives: alternatives.get(parsed.data.exerciseId) ?? [],
   });
 }

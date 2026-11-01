@@ -26,18 +26,17 @@ export const repsSchema = z
   .max(999, { error: workout.errors.repsInvalid })
   .nullable();
 
-// A set as written to session_sets (upsert by id). A done set needs at least one rep
-// (SPEC.md: a set marked done with 0 reps is rejected).
-export const sessionSetSchema = z
+// All sets of one exercise, written in one go (SPEC.md: one weight and reps per exercise,
+// one tap marks the whole exercise). A done exercise needs at least one rep.
+export const exerciseSetsSchema = z
   .object({
-    id: idSchema,
-    session_exercise_id: idSchema,
-    set_number: z.number().int().min(1).max(100),
+    sessionExerciseId: idSchema,
+    setIds: z.array(idSchema).min(1).max(10),
     weight_kg: weightSchema,
     reps: repsSchema,
     is_done: z.boolean(),
   })
-  .refine((set) => !set.is_done || (set.reps != null && set.reps >= 1), {
+  .refine((sets) => !sets.is_done || (sets.reps != null && sets.reps >= 1), {
     error: workout.errors.repsRequired,
     path: ["reps"],
   });
@@ -53,13 +52,12 @@ export const sessionExerciseSchema = z.object({
 });
 
 export const workoutOpSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("upsertSet"), set: sessionSetSchema }),
-  z.object({ kind: z.literal("deleteSet"), id: idSchema, sessionExerciseId: idSchema }),
+  z.object({ kind: z.literal("saveSets"), sets: exerciseSetsSchema }),
   z.object({ kind: z.literal("upsertExercise"), exercise: sessionExerciseSchema }),
   z.object({ kind: z.literal("deleteExercise"), id: idSchema }),
 ]);
 
-export type SessionSetRow = z.input<typeof sessionSetSchema>;
+export type ExerciseSetsRow = z.input<typeof exerciseSetsSchema>;
 export type SessionExerciseRow = z.input<typeof sessionExerciseSchema>;
 export type WorkoutOp = z.input<typeof workoutOpSchema>;
 

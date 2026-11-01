@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { deleteExercise, setExerciseArchived } from "@/lib/exercises/actions";
 import type { ExerciseDetail } from "@/lib/exercises/queries";
+import type { ExerciseSummary } from "@/lib/exercises/types";
 import { strings } from "@/lib/strings";
 
 const { detail } = strings.exercises;
 
 // Edit / archive / delete for a personal exercise (built-ins are read-only).
-export function ExerciseActions({ exercise }: { exercise: ExerciseDetail }) {
+export function ExerciseActions({ exercise, library }: { exercise: ExerciseDetail; library: ExerciseSummary[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -70,6 +71,8 @@ export function ExerciseActions({ exercise }: { exercise: ExerciseDetail }) {
       )}
 
       <ExerciseFormSheet
+        exercises={library}
+        initialAlternatives={exercise.alternatives}
         open={editing}
         onOpenChange={setEditing}
         exerciseId={exercise.id}

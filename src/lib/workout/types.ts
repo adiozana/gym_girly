@@ -1,30 +1,21 @@
 import type { PreviousPerformance } from "@/lib/calc";
 import type { ExerciseSummary } from "@/lib/exercises/types";
-import type { SetSuggestion } from "./set-input";
 
 export type { PreviousPerformance } from "@/lib/calc";
 export type { SetSuggestion } from "./set-input";
 
 export type ExerciseInfo = ExerciseSummary & { instructions_he: string | null };
 
-// One set row as the screen holds it: the fields keep the typed text, and the suggestion
-// (previous performance, or the set above for an added set) shows as a placeholder.
-export type WorkoutSet = {
-  id: string;
-  set_number: number;
-  weight: string;
-  reps: string;
-  is_done: boolean;
-  suggestion: SetSuggestion;
-};
-
-// The template's plan for this exercise ("3 × 8–12"), when the card came from a template.
+// The plan for this exercise ("3 × 8–12", current weight), when the card came from a plan.
 export type PlannedReps = {
   planned_sets: number;
   rep_range_min: number | null;
   rep_range_max: number | null;
+  target_weight_kg: number | null;
 };
 
+// One exercise row (SPEC.md): one weight and reps for the whole exercise, and one tap marks
+// all its sets done. Every set is still its own session_sets row (setIds), with equal values.
 export type WorkoutCard = {
   id: string;
   position: number;
@@ -33,11 +24,15 @@ export type WorkoutCard = {
   replaced: ExerciseInfo | null;
   template_exercise_id: string | null;
   plan: PlannedReps | null;
-  // The template's alternatives, in priority order.
+  // The 2 fixed alternatives of the original exercise (from the library).
   alternatives: ExerciseInfo[];
   note: string;
   previous: PreviousPerformance | null;
-  sets: WorkoutSet[];
+  setIds: string[];
+  // The fields keep the text as typed; empty shows the suggestion as a placeholder.
+  weight: string;
+  reps: string;
+  done: boolean;
 };
 
 export type WorkoutData = {

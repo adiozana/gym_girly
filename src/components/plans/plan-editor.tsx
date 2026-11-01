@@ -24,11 +24,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import type { ExerciseSummary } from "@/lib/exercises/types";
 import {
-  addAlternative,
   addTemplateExercise,
-  removeAlternative,
   removeTemplateExercise,
-  reorderAlternatives,
   reorderTemplateExercises,
   restoreTemplate,
   updateTemplateExercise,
@@ -44,9 +41,7 @@ const SAVE_DELAY_MS = 500;
 const restrictToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
 const tempId = () => `temp-${crypto.randomUUID()}`;
-const isTemp = (id: string) => id.startsWith("temp-");
 
-type PickerTarget = { kind: "exercise" } | { kind: "alternative"; itemId: string } | null;
 
 function settingsOf(item: EditorItem): TemplateExerciseSettings {
   return {
@@ -54,6 +49,7 @@ function settingsOf(item: EditorItem): TemplateExerciseSettings {
     rep_range_min: item.rep_range_min,
     rep_range_max: item.rep_range_max,
     note: item.note,
+    target_weight_kg: item.target_weight_kg,
   };
 }
 
@@ -64,7 +60,7 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   // The sheet stays mounted with the last item so it can animate closed.
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
-  const [picker, setPicker] = useState<PickerTarget>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   // dnd-kit's default ids come from a module counter that differs between server and client.
   const dndId = useId();
@@ -162,7 +158,7 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
     const position = Math.max(0, ...itemsRef.current.map((item) => item.position)) + 1;
     setItems((prev) => [
       ...prev,
-      { id, position, planned_sets: 3, rep_range_min: null, rep_range_max: null, note: null, exercise, alternatives: [], pending: true },
+      { id, position, planned_sets: 3, rep_range_min: null, rep_range_max: null, note: null, target_weight_kg: null, exercise, pending: true },
     ]);
 
     const result = await addTemplateExercise(plan.id, exercise.id);
@@ -212,57 +208,11 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   }
 
   // ---------------------------------------------------------------------------
-  // Alternatives
-  // ---------------------------------------------------------------------------
-
-  async function addAlternativeTo(itemId: string, exercise: ExerciseSummary) {
-    const id = tempId();
-    updateItem(itemId, (item) => ({
-      ...item,
-      alternatives: [...item.alternatives, { id, position: item.alternatives.length + 1, exercise }],
-    }));
-
-    const result = await addAlternative(itemId, exercise.id);
-    updateItem(itemId, (item) => ({
-      ...item,
-      alternatives: result.ok
-        ? item.alternatives.map((alt) => (alt.id === id ? { ...alt, ...result.data } : alt))
-        : item.alternatives.filter((alt) => alt.id !== id),
-    }));
-    if (!result.ok) toast.error(result.error);
-  }
-
-  async function removeAlternativeFrom(itemId: string, alternativeId: string) {
-    const previous = itemsRef.current.find((item) => item.id === itemId)?.alternatives ?? [];
-    updateItem(itemId, (item) => ({ ...item, alternatives: item.alternatives.filter((a) => a.id !== alternativeId) }));
-    const result = await removeAlternative(alternativeId);
-    if (!result.ok) {
-      updateItem(itemId, (item) => ({ ...item, alternatives: previous }));
-      toast.error(result.error);
-    }
-  }
-
-  async function moveAlternative(itemId: string, alternativeId: string, delta: -1 | 1) {
-    const previous = itemsRef.current.find((item) => item.id === itemId)?.alternatives ?? [];
-    if (previous.some((alt) => isTemp(alt.id))) return;
-    const index = previous.findIndex((alt) => alt.id === alternativeId);
-    const next = moveItem(previous, index, index + delta);
-    updateItem(itemId, (item) => ({ ...item, alternatives: next }));
-
-    const result = await reorderAlternatives(itemId, next.map((alt) => alt.id));
-    if (!result.ok) {
-      updateItem(itemId, (item) => ({ ...item, alternatives: previous }));
-      toast.error(strings.common.saveFailed);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
   const sheetItem = items.find((item) => item.id === sheetItemId);
   const sheetIndex = sheetItem ? items.indexOf(sheetItem) : -1;
-  const pickerItem = picker?.kind === "alternative" ? items.find((item) => item.id === picker.itemId) : undefined;
   const nameById = (id: string | number) => items.find((item) => item.id === id)?.exercise.name_he ?? "";
 
   const announcements: Announcements = {
@@ -275,7 +225,7 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   };
 
   const addButton = (
-    <Button size="lg" className="w-full" onClick={() => setPicker({ kind: "exercise" })}>
+    <Button size="lg" className="w-full" onClick={() => setPickerOpen(true)}>
       <PlusIcon aria-hidden="true" />
       {editor.addExercise}
     </Button>
@@ -353,26 +303,16 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
           onChange={(settings) => changeSettings(sheetItem.id, settings)}
           onMove={(delta) => moveBy(sheetItem.id, delta)}
           onRemove={() => removeExercise(sheetItem.id)}
-          onAddAlternative={() => setPicker({ kind: "alternative", itemId: sheetItem.id })}
-          onRemoveAlternative={(alternativeId) => void removeAlternativeFrom(sheetItem.id, alternativeId)}
-          onMoveAlternative={(alternativeId, delta) => void moveAlternative(sheetItem.id, alternativeId, delta)}
         />
       )}
 
       <ExercisePicker
-        open={picker !== null}
-        onOpenChange={(open) => !open && setPicker(null)}
-        title={picker?.kind === "alternative" ? strings.plans.picker.alternativeTitle : strings.plans.picker.title}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        title={strings.plans.picker.title}
         exercises={exercises}
-        excludeIds={
-          pickerItem
-            ? [pickerItem.exercise.id, ...pickerItem.alternatives.map((alt) => alt.exercise.id)]
-            : items.map((item) => item.exercise.id)
-        }
-        onSelect={(exercise) => {
-          if (picker?.kind === "alternative") void addAlternativeTo(picker.itemId, exercise);
-          else void addExercise(exercise);
-        }}
+        excludeIds={items.map((item) => item.exercise.id)}
+        onSelect={(exercise) => void addExercise(exercise)}
       />
     </>
   );

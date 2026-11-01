@@ -16,25 +16,24 @@ import { completeSession, deleteSession, getExerciseContext } from "@/lib/workou
 import { emptyQueue, restoreQueue } from "@/lib/workout/queue";
 import { checkDone, sanitizeRepsInput, sanitizeWeightInput } from "@/lib/workout/set-input";
 import {
-  addSet,
   canSwap,
-  countDoneSets,
-  countUndoneSets,
+  countDoneExercises,
+  countUndoneExercises,
+  defaultSetCount,
   markDone,
   renumberCards,
-  setsFromPrevious,
+  suggestionFor,
   swapExercise,
   toExerciseRow,
-  toSetRow,
+  toSetsRow,
   withPrevious,
+  withSetCount,
 } from "@/lib/workout/state";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/workout/storage";
-import type { ExerciseInfo, PreviousPerformance, WorkoutCard, WorkoutData, WorkoutSet } from "@/lib/workout/types";
+import type { ExerciseInfo, WorkoutCard, WorkoutData } from "@/lib/workout/types";
 import { useWakeLock } from "@/lib/workout/use-wake-lock";
 import { useWorkoutSync } from "@/lib/workout/use-workout-sync";
-import { ExerciseCard, type CardActions } from "./exercise-card";
-import { ExerciseDetailsSheet } from "./exercise-details-sheet";
-import type { SetError } from "./set-row";
+import { ExerciseCard, type CardActions, type CardError } from "./exercise-card";
 import { WorkoutHeader } from "./workout-header";
 
 const { workout: copy } = strings;
@@ -77,8 +76,9 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
   const [cards, setCards] = useState<WorkoutCard[]>(initial.cards);
   // Handlers read and write the latest cards synchronously, so queued ops always match the screen.
   const cardsRef = useRef(cards);
-  const [errors, setErrors] = useState<Record<string, SetError>>({});
-  const [details, setDetails] = useState<{ cardId: string; open: boolean } | null>(null);
+  const [errors, setErrors] = useState<Record<string, CardError>>({});
+  // One accordion open at a time keeps the screen calm mid-workout.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [picker, setPicker] = useState<PickerMode>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [busy, setBusy] = useState(false);
@@ -109,19 +109,19 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
     [commit],
   );
 
-  const setError = useCallback((setId: string, error: SetError | null) => {
+  const setError = useCallback((cardId: string, error: CardError | null) => {
     setErrors((prev) => {
-      if (error) return prev[setId] === error ? prev : { ...prev, [setId]: error };
-      if (!(setId in prev)) return prev;
+      if (error) return prev[cardId] === error ? prev : { ...prev, [cardId]: error };
+      if (!(cardId in prev)) return prev;
       const next = { ...prev };
-      delete next[setId];
+      delete next[cardId];
       return next;
     });
   }, []);
 
-  const queueSet = useCallback(
-    (cardId: string, set: WorkoutSet, debounce = false) =>
-      enqueue({ kind: "upsertSet", set: toSetRow(cardId, set) }, { debounce }),
+  // Writes all sets of a row (same values) in one op.
+  const queueSets = useCallback(
+    (card: WorkoutCard, debounce = false) => enqueue({ kind: "saveSets", sets: toSetsRow(card) }, { debounce }),
     [enqueue],
   );
 
@@ -154,12 +154,12 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
     [sessionId, findCard, replaceCard],
   );
 
-  // Adds a card for an exercise: at the end, or right below another card. It gets as many
-  // sets as last time (else 3), prefilled from that history.
+  // Adds a row for an exercise: at the end, or right below another row. It gets as many sets
+  // as last time (else 3), its 2 alternatives and its history for the suggestions.
   const addCard = useCallback(
     async (exercise: ExerciseSummary | ExerciseInfo, afterCardId: string | null) => {
       const context = await fetchContext(exercise.id, sessionId);
-      const previous: PreviousPerformance | null = context?.previous ?? null;
+      const previous = context?.previous ?? null;
       const instructions = context?.instructions_he ?? ("instructions_he" in exercise ? exercise.instructions_he : null);
       const card: WorkoutCard = {
         id: newId(),
@@ -168,20 +168,24 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
         replaced: null,
         template_exercise_id: null,
         plan: null,
-        alternatives: [],
+        alternatives: context?.alternatives ?? [],
         note: "",
         previous,
-        sets: setsFromPrevious(previous, newId),
+        setIds: Array.from({ length: defaultSetCount(null, previous) }, newId),
+        weight: "",
+        reps: "",
+        done: false,
       };
 
       const list = [...cardsRef.current];
       const anchor = afterCardId ? list.findIndex((c) => c.id === afterCardId) : -1;
       list.splice(anchor === -1 ? list.length : anchor + 1, 0, card);
       commitOrder(list);
-      for (const set of card.sets) queueSet(card.id, set);
+      queueSets(card);
+      setExpandedId(null);
       scrollToCard(card.id);
     },
-    [sessionId, commitOrder, queueSet],
+    [sessionId, commitOrder, queueSets],
   );
 
   const swap = useCallback(
@@ -191,92 +195,66 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
       const next = swapExercise(card, exercise);
       replaceCard(next);
       queueCard(next);
-      for (const set of next.sets) {
-        queueSet(cardId, set);
-        setError(set.id, null);
-      }
-      setDetails((prev) => (prev ? { ...prev, open: false } : prev));
+      queueSets(next);
+      setError(cardId, null);
       void loadContext(cardId, exercise.id);
     },
-    [findCard, replaceCard, queueCard, queueSet, setError, loadContext],
+    [findCard, replaceCard, queueCard, queueSets, setError, loadContext],
   );
 
   // -------------------------------------------------------------------------
-  // Card actions (stable, so cards only re-render when their own data changes)
+  // Row actions (stable, so rows only re-render when their own data changes)
   // -------------------------------------------------------------------------
 
   const actions = useMemo<CardActions>(() => {
-    const changeField = (field: "weight" | "reps") => (cardId: string, setId: string, text: string) => {
+    const changeField = (field: "weight" | "reps") => (cardId: string, text: string) => {
       const card = findCard(cardId);
-      const set = card?.sets.find((s) => s.id === setId);
-      if (!card || !set) return;
+      if (!card) return;
       const value = field === "weight" ? sanitizeWeightInput(text) : sanitizeRepsInput(text);
       if (value === null) return; // not a valid keystroke (e.g. a third decimal)
 
-      let next: WorkoutSet = { ...set, [field]: value };
-      setError(setId, null);
-      if (next.is_done) {
-        // A done set must stay valid; if an edit breaks it, it's no longer marked done.
-        const check = checkDone({ ...next, suggestion: null }, card.exercise.equipment);
+      let next: WorkoutCard = { ...card, [field]: value };
+      setError(cardId, null);
+      if (next.done) {
+        // A done row must stay valid; if an edit breaks it, it's no longer marked done.
+        const check = checkDone({ weight: next.weight, reps: next.reps, suggestion: null }, card.exercise.equipment);
         if (!check.ok) {
-          next = { ...next, is_done: false };
-          setError(setId, check.error);
+          next = { ...next, done: false };
+          setError(cardId, check.error);
         }
       }
-      replaceCard({ ...card, sets: card.sets.map((s) => (s.id === setId ? next : s)) });
-      queueSet(cardId, next, true);
+      replaceCard(next);
+      queueSets(next, true);
     };
 
     return {
-      openDetails: (cardId) => setDetails({ cardId, open: true }),
+      toggleExpanded: (cardId) => setExpandedId((current) => (current === cardId ? null : cardId)),
       changeWeight: changeField("weight"),
       changeReps: changeField("reps"),
 
-      toggleDone: (cardId, setId) => {
-        const card = findCard(cardId);
-        const set = card?.sets.find((s) => s.id === setId);
-        if (!card || !set) return;
-        let next: WorkoutSet;
-        if (set.is_done) {
-          next = { ...set, is_done: false };
-        } else {
-          const check = checkDone(set, card.exercise.equipment);
-          if (!check.ok) return setError(setId, check.error);
-          next = markDone(set, check);
-        }
-        setError(setId, null);
-        replaceCard({ ...card, sets: card.sets.map((s) => (s.id === setId ? next : s)) });
-        queueSet(cardId, next);
-      },
-
-      addSet: (cardId) => {
+      toggleDone: (cardId) => {
         const card = findCard(cardId);
         if (!card) return;
-        const next = addSet(card, newId());
+        let next: WorkoutCard;
+        if (card.done) {
+          next = { ...card, done: false };
+        } else {
+          const check = checkDone({ weight: card.weight, reps: card.reps, suggestion: suggestionFor(card) }, card.exercise.equipment);
+          if (!check.ok) return setError(cardId, check.error);
+          next = markDone(card, check);
+        }
+        setError(cardId, null);
         replaceCard(next);
-        const added = next.sets.at(-1);
-        if (added) queueSet(cardId, added);
+        queueSets(next);
       },
 
-      removeLastSet: (cardId) => {
+      changeSetCount: (cardId, delta) => {
         const card = findCard(cardId);
-        const last = card?.sets.at(-1);
-        if (!card || !last || card.sets.length <= 1) return;
-        replaceCard({ ...card, sets: card.sets.slice(0, -1) });
-        setError(last.id, null);
-        enqueue({ kind: "deleteSet", id: last.id, sessionExerciseId: cardId });
-        toast(copy.card.setRemoved, {
-          action: {
-            label: strings.common.undo,
-            onClick: () => {
-              const current = findCard(cardId);
-              // Only while it would still be the last set.
-              if (!current || (current.sets.at(-1)?.set_number ?? 0) !== last.set_number - 1) return;
-              replaceCard({ ...current, sets: [...current.sets, last] });
-              queueSet(cardId, last);
-            },
-          },
-        });
+        if (!card) return;
+        const next = withSetCount(card, card.setIds.length + delta, newId);
+        if (next.setIds.length === card.setIds.length) return;
+        replaceCard(next);
+        queueSets(next);
       },
 
       changeNote: (cardId, text) => {
@@ -285,6 +263,13 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
         const next = { ...card, note: text.slice(0, 300) };
         replaceCard(next);
         queueCard(next, true);
+      },
+
+      swap,
+      addExtra: (cardId, exercise) => void addCard(exercise, cardId),
+      chooseOther: (cardId) => {
+        const card = findCard(cardId);
+        if (card) setPicker({ kind: canSwap(card) ? "swap" : "extra", cardId });
       },
 
       move: (cardId, delta) => {
@@ -301,6 +286,7 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
         const removed = list[index];
         if (!removed) return;
         commitOrder(list.filter((card) => card.id !== cardId));
+        setExpandedId(null);
         enqueue({ kind: "deleteExercise", id: cardId });
         toast(copy.card.removed, {
           action: {
@@ -310,13 +296,13 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
               const next = [...cardsRef.current];
               next.splice(Math.min(index, next.length), 0, removed);
               commitOrder(next);
-              for (const set of removed.sets) queueSet(cardId, set);
+              queueSets(removed);
             },
           },
         });
       },
     };
-  }, [findCard, replaceCard, setError, queueSet, queueCard, enqueue, commitOrder]);
+  }, [findCard, replaceCard, setError, queueSets, queueCard, enqueue, commitOrder, swap, addCard]);
 
   // -------------------------------------------------------------------------
   // Save and delete
@@ -356,8 +342,8 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
   }
 
   function requestSave() {
-    if (countDoneSets(cardsRef.current) === 0) return setDialog("nothingDone");
-    if (countUndoneSets(cardsRef.current) > 0) return setDialog("confirmSave");
+    if (countDoneExercises(cardsRef.current) === 0) return setDialog("nothingDone");
+    if (countUndoneExercises(cardsRef.current) > 0) return setDialog("confirmSave");
     void finishSave();
   }
 
@@ -387,20 +373,14 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
   // -------------------------------------------------------------------------
 
   const title = workout.template_name ?? copy.freeWorkout;
-  const detailsCard = details ? cards.find((card) => card.id === details.cardId) : undefined;
   const pickerCard = picker && picker.kind !== "add" ? cards.find((card) => card.id === picker.cardId) : undefined;
-  const undoneCount = countUndoneSets(cards);
+  const undoneCount = countUndoneExercises(cards);
 
   function onPick(exercise: ExerciseSummary) {
     if (!picker) return;
     if (picker.kind === "add") void addCard(exercise, null);
     else if (picker.kind === "swap") swap(picker.cardId, { ...exercise, instructions_he: null });
     else void addCard(exercise, picker.cardId);
-  }
-
-  function openPickerFromDetails(card: WorkoutCard) {
-    setDetails((prev) => (prev ? { ...prev, open: false } : prev));
-    setPicker({ kind: canSwap(card) ? "swap" : "extra", cardId: card.id });
   }
 
   return (
@@ -416,14 +396,15 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
       {cards.length === 0 ? (
         <EmptyState icon={ClipboardDocumentListIcon} title={copy.empty.title} body={copy.empty.body} />
       ) : (
-        <div className="flex flex-col gap-4 pt-4">
+        <div className="flex flex-col gap-3 pt-4">
           {cards.map((card, index) => (
             <ExerciseCard
               key={card.id}
               card={card}
+              expanded={expandedId === card.id}
               canMoveUp={index > 0}
               canMoveDown={index < cards.length - 1}
-              errors={errors}
+              error={errors[card.id]}
               actions={actions}
             />
           ))}
@@ -442,20 +423,6 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
           </Button>
         </div>
       </div>
-
-      {detailsCard && details && (
-        <ExerciseDetailsSheet
-          card={detailsCard}
-          open={details.open}
-          onOpenChange={(open) => setDetails({ cardId: detailsCard.id, open })}
-          onSwap={(exercise) => swap(detailsCard.id, exercise)}
-          onAddExtra={(exercise) => {
-            setDetails({ cardId: detailsCard.id, open: false });
-            void addCard(exercise, detailsCard.id);
-          }}
-          onChooseOther={() => openPickerFromDetails(detailsCard)}
-        />
-      )}
 
       <ExercisePicker
         open={picker !== null}

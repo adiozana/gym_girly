@@ -3,13 +3,12 @@ import type { WorkoutOp } from "@/lib/validation/workout";
 import { emptyQueue, restoreQueue } from "./queue";
 import { createSyncEngine, TEXT_DEBOUNCE_MS, type SendResult } from "./sync-engine";
 
-const CARD = "00000000-0000-4000-8000-0000000000c1";
+// n picks the exercise row, so different n are different entities in the queue.
 const setOp = (n: number, reps: number): WorkoutOp => ({
-  kind: "upsertSet",
-  set: {
-    id: `00000000-0000-4000-8000-00000000000${n}`,
-    session_exercise_id: CARD,
-    set_number: n,
+  kind: "saveSets",
+  sets: {
+    sessionExerciseId: `00000000-0000-4000-8000-0000000000c${n}`,
+    setIds: [`00000000-0000-4000-8000-00000000000${n}`],
     weight_kg: 50,
     reps,
     is_done: false,

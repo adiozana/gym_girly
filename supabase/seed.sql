@@ -183,3 +183,106 @@ insert into public.exercises (id, user_id, name_he, name_en, muscle_group, equip
 ('00000000-0000-4000-8000-000000000080', null, 'קפיצה בחבל', 'Jump Rope', 'cardio', 'other',
  'אוחזים בידיות כשהמרפקים צמודים לגוף, והחבל מאחורי העקבים. מסובבים את החבל בעזרת פרקי הידיים וקופצים קפיצות קטנות על כריות כפות הרגליים. טעות נפוצה: לקפוץ גבוה מדי ולסובב מהכתפיים.')
 on conflict (id) do nothing;
+
+-- Two fixed alternatives per built-in exercise (SPEC.md "ספריית תרגילים"), in priority order:
+-- same muscle group (or the closest), preferably other equipment, so one is free when a
+-- machine is taken. Columns: exercise, alternative 1, alternative 2 (seed numbers above).
+insert into public.exercise_alternatives (exercise_id, alternative_exercise_id, position)
+select
+  ('00000000-0000-4000-8000-' || lpad(v.exercise::text, 12, '0'))::uuid,
+  ('00000000-0000-4000-8000-' || lpad(a.alternative::text, 12, '0'))::uuid,
+  a.position
+from (values
+  -- chest
+  (1, 2, 3),    -- Barbell Bench Press → Dumbbell Bench Press, Machine Chest Press
+  (2, 1, 3),    -- Dumbbell Bench Press → Barbell Bench Press, Machine Chest Press
+  (3, 2, 9),    -- Machine Chest Press → Dumbbell Bench Press, Push-Up
+  (4, 5, 3),    -- Incline Barbell Bench Press → Incline Dumbbell Press, Machine Chest Press
+  (5, 4, 3),    -- Incline Dumbbell Press → Incline Barbell Bench Press, Machine Chest Press
+  (6, 7, 8),    -- Pec Deck Fly → Dumbbell Fly, Cable Crossover
+  (7, 6, 8),    -- Dumbbell Fly → Pec Deck Fly, Cable Crossover
+  (8, 6, 7),    -- Cable Crossover → Pec Deck Fly, Dumbbell Fly
+  (9, 2, 3),    -- Push-Up → Dumbbell Bench Press, Machine Chest Press
+  -- back
+  (10, 17, 11), -- Pull-Up → Assisted Pull-Up, Lat Pulldown
+  (11, 17, 10), -- Lat Pulldown → Assisted Pull-Up, Pull-Up
+  (12, 15, 14), -- Seated Cable Row → Machine Row, One-Arm Dumbbell Row
+  (13, 14, 15), -- Barbell Bent-Over Row → One-Arm Dumbbell Row, Machine Row
+  (14, 12, 13), -- One-Arm Dumbbell Row → Seated Cable Row, Barbell Bent-Over Row
+  (15, 12, 14), -- Machine Row → Seated Cable Row, One-Arm Dumbbell Row
+  (16, 47, 61), -- Deadlift → Romanian Deadlift, Kettlebell Sumo Deadlift
+  (17, 11, 10), -- Assisted Pull-Up → Lat Pulldown, Pull-Up
+  (18, 11, 17), -- Straight-Arm Cable Pulldown → Lat Pulldown, Assisted Pull-Up
+  (19, 16, 48), -- Back Extension → Deadlift, Dumbbell Romanian Deadlift
+  -- shoulders
+  (20, 22, 21), -- Dumbbell Shoulder Press → Machine Shoulder Press, Overhead Press
+  (21, 20, 22), -- Overhead Press → Dumbbell Shoulder Press, Machine Shoulder Press
+  (22, 20, 21), -- Machine Shoulder Press → Dumbbell Shoulder Press, Overhead Press
+  (23, 24, 22), -- Dumbbell Lateral Raise → Cable Lateral Raise, Machine Shoulder Press
+  (24, 23, 22), -- Cable Lateral Raise → Dumbbell Lateral Raise, Machine Shoulder Press
+  (25, 26, 23), -- Reverse Pec Deck → Face Pull, Dumbbell Lateral Raise
+  (26, 25, 23), -- Face Pull → Reverse Pec Deck, Dumbbell Lateral Raise
+  (27, 20, 22), -- Dumbbell Front Raise → Dumbbell Shoulder Press, Machine Shoulder Press
+  -- biceps
+  (28, 29, 31), -- Barbell Curl → Dumbbell Curl, Cable Curl
+  (29, 28, 31), -- Dumbbell Curl → Barbell Curl, Cable Curl
+  (30, 29, 31), -- Hammer Curl → Dumbbell Curl, Cable Curl
+  (31, 29, 32), -- Cable Curl → Dumbbell Curl, Machine Preacher Curl
+  (32, 31, 28), -- Machine Preacher Curl → Cable Curl, Barbell Curl
+  (33, 29, 31), -- Band Curl → Dumbbell Curl, Cable Curl
+  -- triceps
+  (34, 39, 37), -- Cable Triceps Pushdown → Machine Triceps Extension, Dips
+  (35, 36, 34), -- Overhead Cable Triceps Extension → Overhead Dumbbell Triceps Extension, Cable Triceps Pushdown
+  (36, 35, 38), -- Overhead Dumbbell Triceps Extension → Overhead Cable Triceps Extension, Skull Crusher
+  (37, 39, 34), -- Dips → Machine Triceps Extension, Cable Triceps Pushdown
+  (38, 36, 34), -- Skull Crusher → Overhead Dumbbell Triceps Extension, Cable Triceps Pushdown
+  (39, 34, 37), -- Machine Triceps Extension → Cable Triceps Pushdown, Dips
+  -- legs
+  (40, 43, 42), -- Barbell Back Squat → Hack Squat, Leg Press
+  (41, 42, 53), -- Goblet Squat → Leg Press, Smith Machine Squat
+  (42, 43, 41), -- Leg Press → Hack Squat, Goblet Squat
+  (43, 42, 40), -- Hack Squat → Leg Press, Barbell Back Squat
+  (44, 42, 50), -- Leg Extension → Leg Press, Bulgarian Split Squat
+  (45, 46, 48), -- Lying Leg Curl → Seated Leg Curl, Dumbbell Romanian Deadlift
+  (46, 45, 47), -- Seated Leg Curl → Lying Leg Curl, Romanian Deadlift
+  (47, 48, 45), -- Romanian Deadlift → Dumbbell Romanian Deadlift, Lying Leg Curl
+  (48, 47, 46), -- Dumbbell Romanian Deadlift → Romanian Deadlift, Seated Leg Curl
+  (49, 50, 42), -- Dumbbell Lunge → Bulgarian Split Squat, Leg Press
+  (50, 49, 42), -- Bulgarian Split Squat → Dumbbell Lunge, Leg Press
+  (51, 52, 42), -- Standing Calf Raise → Seated Calf Raise, Leg Press
+  (52, 51, 42), -- Seated Calf Raise → Standing Calf Raise, Leg Press
+  (53, 40, 43), -- Smith Machine Squat → Barbell Back Squat, Hack Squat
+  -- glutes
+  (54, 55, 56), -- Barbell Hip Thrust → Machine Hip Thrust, Glute Bridge
+  (55, 54, 56), -- Machine Hip Thrust → Barbell Hip Thrust, Glute Bridge
+  (56, 54, 55), -- Glute Bridge → Barbell Hip Thrust, Machine Hip Thrust
+  (57, 55, 56), -- Cable Glute Kickback → Machine Hip Thrust, Glute Bridge
+  (58, 59, 57), -- Hip Abduction Machine → Banded Hip Abduction, Cable Glute Kickback
+  (59, 58, 57), -- Banded Hip Abduction → Hip Abduction Machine, Cable Glute Kickback
+  (60, 50, 49), -- Dumbbell Step-Up → Bulgarian Split Squat, Dumbbell Lunge
+  (61, 16, 48), -- Kettlebell Sumo Deadlift → Deadlift, Dumbbell Romanian Deadlift
+  -- core
+  (62, 69, 68), -- Plank → Dead Bug, Ab Wheel Rollout
+  (63, 67, 62), -- Side Plank → Pallof Press, Plank
+  (64, 66, 65), -- Cable Crunch → Ab Crunch Machine, Hanging Leg Raise
+  (65, 69, 64), -- Hanging Leg Raise → Dead Bug, Cable Crunch
+  (66, 64, 65), -- Ab Crunch Machine → Cable Crunch, Hanging Leg Raise
+  (67, 63, 62), -- Pallof Press → Side Plank, Plank
+  (68, 62, 64), -- Ab Wheel Rollout → Plank, Cable Crunch
+  (69, 62, 65), -- Dead Bug → Plank, Hanging Leg Raise
+  -- full body
+  (70, 75, 48), -- Kettlebell Swing → Kettlebell Clean and Press, Dumbbell Romanian Deadlift
+  (71, 74, 75), -- Turkish Get-Up → Farmer's Carry, Kettlebell Clean and Press
+  (72, 75, 73), -- Dumbbell Thruster → Kettlebell Clean and Press, Burpee
+  (73, 72, 80), -- Burpee → Dumbbell Thruster, Jump Rope
+  (74, 70, 71), -- Farmer's Carry → Kettlebell Swing, Turkish Get-Up
+  (75, 72, 70), -- Kettlebell Clean and Press → Dumbbell Thruster, Kettlebell Swing
+  -- cardio
+  (76, 79, 77), -- Treadmill → Elliptical, Stationary Bike
+  (77, 79, 76), -- Stationary Bike → Elliptical, Treadmill
+  (78, 77, 79), -- Rowing Machine → Stationary Bike, Elliptical
+  (79, 76, 77), -- Elliptical → Treadmill, Stationary Bike
+  (80, 76, 73)  -- Jump Rope → Treadmill, Burpee
+) as v(exercise, first, second)
+cross join lateral (values (1, v.first), (2, v.second)) as a(position, alternative)
+on conflict do nothing;

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { fail, invalid, ok, type ActionResult } from "@/lib/actions/result";
 import { getCurrentUser } from "@/lib/auth/session";
 import { strings } from "@/lib/strings";
@@ -83,5 +84,24 @@ export async function deleteExercise(id: unknown): Promise<ActionResult> {
   if (error || data.length === 0) return fail();
 
   revalidateExercises();
+  return ok(null);
+}
+
+// Replaces a personal exercise's 2 alternatives (built-ins are fixed; the function rejects them).
+export async function setExerciseAlternatives(id: unknown, alternativeIds: unknown): Promise<ActionResult> {
+  await getCurrentUser();
+  const exerciseId = idSchema.safeParse(id);
+  const ids = z.array(idSchema).max(2).safeParse(alternativeIds);
+  if (!exerciseId.success || !ids.success) return fail();
+  if (ids.data.includes(exerciseId.data) || new Set(ids.data).size !== ids.data.length) return fail();
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_exercise_alternatives", {
+    p_exercise_id: exerciseId.data,
+    p_ids: ids.data,
+  });
+  if (error) return fail();
+
+  revalidateExercises(exerciseId.data);
   return ok(null);
 }

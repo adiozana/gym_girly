@@ -1,5 +1,5 @@
 import "server-only";
-import { suggestionForSet, type PreviousPerformance } from "@/lib/calc";
+import type { PreviousPerformance } from "@/lib/calc";
 import { getCurrentUser } from "@/lib/auth/session";
 import { EXERCISE_SUMMARY_COLUMNS, listExercises, toSummary } from "@/lib/exercises/queries";
 import type { ExerciseSummary } from "@/lib/exercises/types";
@@ -30,6 +30,25 @@ export async function fetchPreviousPerformance(
   });
   if (error) throw error;
   return groupPreviousPerformance(data);
+}
+
+// The 2 fixed alternatives of each exercise (with instructions, for the row's accordion).
+export async function fetchAlternatives(
+  supabase: Supabase,
+  exerciseIds: readonly string[],
+): Promise<Map<string, ExerciseInfo[]>> {
+  const result = new Map<string, ExerciseInfo[]>();
+  if (exerciseIds.length === 0) return result;
+  const { data, error } = await supabase
+    .from("exercise_alternatives")
+    .select(`exercise_id, position, alternative:exercises!alternative_exercise_id (${EXERCISE_INFO_COLUMNS})`)
+    .in("exercise_id", [...new Set(exerciseIds)])
+    .order("position");
+  if (error) throw error;
+  for (const row of data) {
+    result.set(row.exercise_id, [...(result.get(row.exercise_id) ?? []), toInfo(row.alternative)]);
+  }
+  return result;
 }
 
 // The user's open workout, if any (at most one: one_active_session).
@@ -67,35 +86,32 @@ export async function getWorkout(id: string): Promise<WorkoutPageData> {
            exercise:exercises!session_exercises_exercise_id_fkey (${EXERCISE_INFO_COLUMNS}),
            replaced:exercises!session_exercises_replaced_exercise_id_fkey (${EXERCISE_INFO_COLUMNS}),
            session_sets (id, set_number, weight_kg, reps, is_done),
-           template_exercise:template_exercises (
-             planned_sets, rep_range_min, rep_range_max,
-             template_exercise_alternatives (
-               position,
-               exercise:exercises (${EXERCISE_INFO_COLUMNS})
-             )
-           )
+           template_exercise:template_exercises (planned_sets, rep_range_min, rep_range_max, target_weight_kg)
          )`,
       )
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
-    if (!data || data.status !== "in_progress") return { session: data, previous: new Map<string, PreviousPerformance>() };
+    if (!data || data.status !== "in_progress") {
+      return { session: data, previous: new Map<string, PreviousPerformance>(), alternatives: new Map<string, ExerciseInfo[]>() };
+    }
 
-    const previous = await fetchPreviousPerformance(
-      supabase,
-      data.session_exercises.map((se) => se.exercise.id),
-      data.id,
-    );
-    return { session: data, previous };
+    const [previous, alternatives] = await Promise.all([
+      fetchPreviousPerformance(supabase, data.session_exercises.map((se) => se.exercise.id), data.id),
+      fetchAlternatives(supabase, data.session_exercises.map((se) => (se.replaced ?? se.exercise).id)),
+    ]);
+    return { session: data, previous, alternatives };
   };
 
-  const [{ session, previous }, library] = await Promise.all([loadSession(), listExercises()]);
+  const [{ session, previous, alternatives }, library] = await Promise.all([loadSession(), listExercises()]);
   if (!session) return { status: "not_found" };
   if (session.status !== "in_progress") return { status: "completed" };
 
   const cards: WorkoutCard[] = session.session_exercises.sort(byPosition).map((se) => {
-    const history = previous.get(se.exercise.id) ?? null;
     const template = se.template_exercise;
+    const sets = se.session_sets.sort((a, b) => a.set_number - b.set_number);
+    // The sets of a row are uniform; older data may not be, so the first set speaks for them.
+    const first = sets[0];
     return {
       id: se.id,
       position: se.position,
@@ -107,23 +123,16 @@ export async function getWorkout(id: string): Promise<WorkoutPageData> {
             planned_sets: template.planned_sets,
             rep_range_min: template.rep_range_min,
             rep_range_max: template.rep_range_max,
+            target_weight_kg: template.target_weight_kg == null ? null : Number(template.target_weight_kg),
           }
         : null,
-      alternatives: template
-        ? template.template_exercise_alternatives.sort(byPosition).map((alt) => toInfo(alt.exercise))
-        : [],
+      alternatives: alternatives.get((se.replaced ?? se.exercise).id) ?? [],
       note: se.note ?? "",
-      previous: history,
-      sets: se.session_sets
-        .sort((a, b) => a.set_number - b.set_number)
-        .map((set) => ({
-          id: set.id,
-          set_number: set.set_number,
-          weight: formatWeight(set.weight_kg == null ? null : Number(set.weight_kg)),
-          reps: formatReps(set.reps),
-          is_done: set.is_done,
-          suggestion: suggestionForSet(history, set.set_number),
-        })),
+      previous: previous.get(se.exercise.id) ?? null,
+      setIds: sets.map((set) => set.id),
+      weight: formatWeight(first?.weight_kg == null ? null : Number(first.weight_kg)),
+      reps: formatReps(first?.reps ?? null),
+      done: sets.length > 0 && sets.every((set) => set.is_done),
     };
   });
 
