@@ -53,6 +53,7 @@ supabase db push --include-seed     # migrations + seed
 | פקודה | מה היא עושה |
 | --- | --- |
 | `npm test` | בדיקות יחידה (Vitest) |
+| `npm run test:integration` | בדיקות אינטגרציה מול Supabase המקומי: הרשמה, התחברות ובידוד בין משתמשים (דורש `supabase start`) |
 | `npm run typecheck` | בדיקת טיפוסים (TypeScript strict) |
 | `npm run lint` | ESLint |
 | `npm run build` | build לפרודקשן |

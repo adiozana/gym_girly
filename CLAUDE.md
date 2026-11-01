@@ -17,12 +17,14 @@
 - Supabase env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the spec's `ANON_KEY` was renamed by the user's decision).
 
 ## Commands
-`npm run dev` · `npm test` · `npm run typecheck` · `npm run lint` · `npm run build` · `npm run db:reset` (local DB from scratch) · `npm run db:test` (pgTAP RLS/seed tests) · `npm run db:types`
+`npm run dev` · `npm test` · `npm run test:integration` (needs `supabase start`) · `npm run typecheck` · `npm run lint` · `npm run build` · `npm run db:reset` (local DB from scratch) · `npm run db:test` (pgTAP RLS/seed tests) · `npm run db:types`
 
 ## Conventions
 - Code, identifiers, table names and code comments in English. All UI text in Hebrew, only in `src/lib/strings.ts`.
 - TypeScript strict, no `any`.
 - Reads in Server Components; writes via Server Actions, each validated with Zod (schemas in `src/lib/validation/`).
+- Auth: `getCurrentUser()` (`src/lib/auth/session.ts`) in every page and action that needs the user; the proxy only redirects. With Cache Components, anything that reads the session goes inside `<Suspense>`.
+- Tests that create users run only against local Supabase, never the cloud project.
 - Authorization is enforced by Postgres RLS on every table, not only in code. Never expose the `service_role` key to the client.
 - Calculations (streak, day status, progress, previous performance, e1RM) are pure functions in `src/lib/calc/` with Vitest tests.
 - RTL: `<html lang="he" dir="rtl">`, Tailwind logical properties only (`ms-/me-/ps-/pe-/start/end`). Mobile-first (360–430px), tap targets ≥ 44px.

@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(22);
 
 -- ---------------------------------------------------------------------------
 -- Schema and seed
@@ -41,9 +41,31 @@ select is(
 -- ---------------------------------------------------------------------------
 -- Fixtures: two users, each with a private exercise and a template
 -- ---------------------------------------------------------------------------
-insert into auth.users (id, email, aud, role) values
-  ('11111111-1111-1111-1111-111111111111', 'alice@users.gymtracker.local', 'authenticated', 'authenticated'),
-  ('22222222-2222-2222-2222-222222222222', 'bob@users.gymtracker.local', 'authenticated', 'authenticated');
+insert into auth.users (id, email, aud, role, raw_user_meta_data) values
+  ('11111111-1111-1111-1111-111111111111', 'alice@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"alice"}'),
+  ('22222222-2222-2222-2222-222222222222', 'bob@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"bob"}');
+
+select is(
+  (select username from public.profiles where id = '11111111-1111-1111-1111-111111111111'),
+  'alice',
+  'sign-up creates a profile with the username from user metadata'
+);
+
+select throws_ok(
+  $$insert into auth.users (id, email, aud, role, raw_user_meta_data)
+    values ('33333333-3333-3333-3333-333333333333', 'Bad@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"Bad Name"}')$$,
+  '23514',
+  null,
+  'sign-up with an invalid username is rejected'
+);
+
+select throws_ok(
+  $$insert into auth.users (id, email, aud, role)
+    values ('44444444-4444-4444-4444-444444444444', 'nobody@users.gymtracker.local', 'authenticated', 'authenticated')$$,
+  '23502',
+  null,
+  'sign-up without a username is rejected'
+);
 
 insert into public.exercises (id, user_id, name_he, muscle_group, equipment) values
   ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-1111-1111-1111-111111111111', 'תרגיל של אליס', 'legs', 'other');
@@ -87,6 +109,17 @@ select is(
   80,
   'bob sees the 80 built-in exercises but not alice''s private one'
 );
+
+select results_eq(
+  'select username from public.profiles',
+  $$values ('bob')$$,
+  'bob sees only his own profile'
+);
+
+with changed as (
+  update public.profiles set username = 'hacked' where id = '11111111-1111-1111-1111-111111111111' returning 1
+)
+select is((select count(*)::int from changed), 0, 'bob cannot change alice''s profile');
 
 select is_empty('select 1 from public.workout_templates', 'bob cannot see alice''s templates');
 select is_empty('select 1 from public.template_exercises', 'bob cannot see alice''s template exercises');

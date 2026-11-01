@@ -1,12 +1,16 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "./database.types";
 import { getSupabaseEnv } from "./env";
 
 // Supabase client for Server Components and Server Actions.
 // Create a new one per request; never share it across requests.
 export async function createClient() {
+  // Session checks compare token expiry with the current time, so with Cache Components
+  // everything that uses this client must wait for a real request (not a prerender/prefetch).
+  await connection();
   const { url, publishableKey } = getSupabaseEnv();
   const cookieStore = await cookies();
 
