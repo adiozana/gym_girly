@@ -24,6 +24,7 @@
 - TypeScript strict, no `any`.
 - Reads in Server Components; writes via Server Actions, each validated with Zod (schemas in `src/lib/validation/`).
 - Auth: `getCurrentUser()` (`src/lib/auth/session.ts`) in every page and action that needs the user; the proxy only redirects. With Cache Components, anything that reads the session goes inside `<Suspense>`.
+- Next 16 keeps pages you leave mounted but hidden (React `<Activity>`), with their state. Transient UI state (open sheets/dialogs, "busy" flags) must reset on hide: use `Sheet` / `ConfirmDialog` (they do it) or `useOnHidden()` (`src/lib/use-on-hidden.ts`). An open modal left in a hidden page makes the next page inert.
 - Tests that create users run only against local Supabase, never the cloud project.
 - Authorization is enforced by Postgres RLS on every table, not only in code. Never expose the `service_role` key to the client.
 - Calculations (streak, day status, progress, previous performance, e1RM) are pure functions in `src/lib/calc/` with Vitest tests.

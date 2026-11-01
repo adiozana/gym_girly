@@ -2,10 +2,14 @@ import { Cog6ToothIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActiveSessionBanner } from "@/components/workout/active-session-banner";
+import { StartWorkout } from "@/components/workout/start-workout";
 import { getCurrentUser } from "@/lib/auth/session";
+import { listTemplates } from "@/lib/plans/queries";
 import { strings } from "@/lib/strings";
+import { getActiveSession } from "@/lib/workout/queries";
 
-// Placeholder home until the dashboard is built (stage 5).
+// Home until the dashboard is built (stage 5): greeting and starting or continuing a workout.
 export default function HomePage() {
   return (
     <>
@@ -26,6 +30,12 @@ export default function HomePage() {
         </Suspense>
         <p className="text-ink-muted">{strings.home.placeholder}</p>
       </section>
+
+      <div className="pt-8">
+        <Suspense fallback={<Skeleton className="h-12 w-full" />}>
+          <WorkoutEntry />
+        </Suspense>
+      </div>
     </>
   );
 }
@@ -37,4 +47,11 @@ async function Greeting() {
       {strings.home.greeting} <bdi>{user.username}</bdi>
     </h1>
   );
+}
+
+// An open workout replaces the start button (SPEC.md: a new one doesn't start while one is open).
+async function WorkoutEntry() {
+  const [active, templates] = await Promise.all([getActiveSession(), listTemplates()]);
+  if (active) return <ActiveSessionBanner session={active} />;
+  return <StartWorkout plans={templates.active} />;
 }

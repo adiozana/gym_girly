@@ -258,6 +258,12 @@ isOneToOne: false
             "archive_template":
 { Args: { "p_template_id": string }; Returns: number
                            },
+"complete_session":
+{ Args: { "p_session_id": string }; Returns: boolean
+                           },
+"delete_session_set":
+{ Args: { "p_set_id": string }; Returns: undefined
+                           },
 "duplicate_template":
 { Args: { "p_name": string,"p_template_id": string }; Returns: string
                            },
@@ -282,11 +288,31 @@ isOneToOne: false
 "owns_template_exercise":
 { Args: { "p_template_exercise_id": string }; Returns: boolean
                            },
+"previous_performance":
+{ Args: { "p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
+              "exercise_id": string,"note": string,"reps": number,"session_id": string,"set_number": number,"started_at": string,"weight_kg": number
+            }[]
+                           },
+"renumber_sets":
+{ Args: { "p_session_exercise_id": string }; Returns: undefined
+                           },
+"reorder_session_exercises":
+{ Args: { "p_ids": (string)[],"p_session_id": string }; Returns: undefined
+                           },
 "reorder_template_alternatives":
 { Args: { "p_ids": (string)[],"p_template_exercise_id": string }; Returns: undefined
                            },
 "reorder_template_exercises":
 { Args: { "p_ids": (string)[],"p_template_id": string }; Returns: undefined
+                           },
+"set_goal":
+{ Args: { "p_cycle_off": number,"p_cycle_on": number,"p_day_templates": Json,"p_today": string,"p_training_weekdays": (number)[],"p_type": Database["public"]['Enums']["goal_type"] }; Returns: string
+                           },
+"start_challenge":
+{ Args: { "p_today": string,"p_weeks": number }; Returns: string
+                           },
+"start_session":
+{ Args: { "p_session_date": string,"p_template_id": string }; Returns: string
                            }
           }
           Enums: {

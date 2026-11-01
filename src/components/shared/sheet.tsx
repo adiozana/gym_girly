@@ -4,6 +4,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import type { ReactNode } from "react";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { strings } from "@/lib/strings";
+import { useOnHidden } from "@/lib/use-on-hidden";
 
 type SheetProps = {
   open: boolean;
@@ -18,6 +19,8 @@ type SheetProps = {
 
 // Bottom sheet with a header, a scrolling body and an optional sticky footer.
 export function Sheet({ open, onOpenChange, title, description, children, footer, tall }: SheetProps) {
+  // Only an open one: another instance unmounting must not close whatever shares its state.
+  useOnHidden(() => open && onOpenChange(false));
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className={tall ? "h-[calc(100dvh-4rem)]" : undefined}>

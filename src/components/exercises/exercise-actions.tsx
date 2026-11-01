@@ -5,15 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ExerciseFormSheet } from "@/components/exercises/exercise-form-sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { deleteExercise, setExerciseArchived } from "@/lib/exercises/actions";
 import type { ExerciseDetail } from "@/lib/exercises/queries";
 import { strings } from "@/lib/strings";
@@ -90,28 +82,21 @@ export function ExerciseActions({ exercise }: { exercise: ExerciseDetail }) {
         }}
       />
 
-      <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{detail.deleteTitle}</DialogTitle>
-            <DialogDescription>
-              <bdi>{exercise.name_he}</bdi> · {detail.deleteBody}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="danger"
-              size="lg"
-              onClick={remove}
-              disabled={pending}
-              aria-busy={pending}
-            >
-              {detail.delete}
-            </Button>
-            <DialogClose render={<Button variant="outline" size="lg" />}>{strings.common.cancel}</DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        title={detail.deleteTitle}
+        description={
+          <>
+            <bdi>{exercise.name_he}</bdi> · {detail.deleteBody}
+          </>
+        }
+        confirmLabel={detail.delete}
+        confirmVariant="danger"
+        cancelLabel={strings.common.cancel}
+        onConfirm={remove}
+        pending={pending}
+      />
     </div>
   );
 }

@@ -26,5 +26,10 @@ SPEC.md defines what each screen does; the skill defines how it looks. Where SPE
 - Choice from a short fixed list (muscle group, equipment) → wrapping chips (`ChoiceChips`); a filter row of chips scrolls horizontally.
 - Editor settings save as they change (500ms debounce), with a quiet "שומר / נשמר" line under the sheet title.
 
+## Patterns (stage 3, active workout)
+- **Workout screen:** sticky glass header (back home, name, elapsed time, quiet "שומר / נשמר", "לא נשמר · ניסיון חוזר" in `warning`) and a sticky glass bottom bar ("הוספת תרגיל" outline, "שמירת אימון" primary). Bottom tab bar hidden.
+- **Set row:** number · weight · reps · 48px done toggle. Suggestions from last time are placeholders in `ink-muted`; entered values are `font-medium ink`. Done = `success` toggle with a white check on a `success/10` row.
+- **Exercise card:** tapping the name opens the details sheet (instructions, alternatives, last time); everything else is in the card's overflow menu. Removing a card or the last set is undone from a toast.
+
 ## Open
 - Motion library (`motion`) is in the skill's stack but not in SPEC.md's; decide when the first animated UI is built.
