@@ -19,7 +19,8 @@ import { ExercisePicker } from "@/components/exercises/exercise-picker";
 import { TopBar } from "@/components/layout/top-bar";
 import { PlanMenu } from "@/components/plans/plan-menu";
 import { SortableExerciseRow, type EditorItem } from "@/components/plans/sortable-exercise-row";
-import { TemplateExerciseSheet, type SaveState } from "@/components/plans/template-exercise-sheet";
+import { AddPlanExerciseSheet } from "@/components/plans/add-plan-exercise-sheet";
+import type { PlanExerciseValues } from "@/components/plans/plan-exercise-fields";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import type { ExerciseSummary } from "@/lib/exercises/types";
@@ -57,11 +58,12 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   const [name, setName] = useState(plan.name);
   const [archived, setArchived] = useState(plan.is_archived);
   const [items, setItems] = useState<EditorItem[]>(plan.exercises);
+  // One row's accordion open at a time.
   const [openItemId, setOpenItemId] = useState<string | null>(null);
-  // The sheet stays mounted with the last item so it can animate closed.
-  const [sheetItemId, setSheetItemId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
+  // Picked from the library, waiting for its settings in the "add" sheet.
+  const [adding, setAdding] = useState<ExerciseSummary | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   // dnd-kit's default ids come from a module counter that differs between server and client.
   const dndId = useId();
 
@@ -116,9 +118,11 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
     );
   }
 
-  function closeSheet() {
-    setOpenItemId(null);
-    for (const id of [...saveTimers.current.keys()]) void flushSave(id);
+  // Collapsing a row (or opening another) saves its pending changes right away.
+  function toggleRow(id: string) {
+    for (const pending of [...saveTimers.current.keys()]) void flushSave(pending);
+    setSaveState("idle");
+    setOpenItemId((current) => (current === id ? null : id));
   }
 
   // ---------------------------------------------------------------------------
@@ -153,15 +157,12 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   // Add / remove exercises
   // ---------------------------------------------------------------------------
 
-  async function addExercise(exercise: ExerciseSummary) {
+  async function addExercise(exercise: ExerciseSummary, values: PlanExerciseValues) {
     const id = tempId();
     const position = Math.max(0, ...itemsRef.current.map((item) => item.position)) + 1;
-    setItems((prev) => [
-      ...prev,
-      { id, position, planned_sets: 3, rep_range_min: null, rep_range_max: null, note: null, target_weight_kg: null, exercise, pending: true },
-    ]);
+    setItems((prev) => [...prev, { id, position, ...values, exercise, pending: true }]);
 
-    const result = await addTemplateExercise(plan.id, exercise.id);
+    const result = await addTemplateExercise(plan.id, exercise.id, values);
     if (!result.ok) {
       setItems((prev) => prev.filter((item) => item.id !== id));
       return void toast.error(result.error);
@@ -211,8 +212,6 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
   // Render
   // ---------------------------------------------------------------------------
 
-  const sheetItem = items.find((item) => item.id === sheetItemId);
-  const sheetIndex = sheetItem ? items.indexOf(sheetItem) : -1;
   const nameById = (id: string | number) => items.find((item) => item.id === id)?.exercise.name_he ?? "";
 
   const announcements: Announcements = {
@@ -273,15 +272,24 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
           >
             <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
               <ul className="flex flex-col gap-2">
-                {items.map((item) => (
+                {items.map((item, index) => (
                   <SortableExerciseRow
                     key={item.id}
                     item={item}
-                    onOpen={() => {
-                      setSaveState("idle");
-                      setSheetItemId(item.id);
-                      setOpenItemId(item.id);
-                    }}
+                    expanded={openItemId === item.id}
+                    canMoveUp={!hasPending && index > 0}
+                    canMoveDown={!hasPending && index < items.length - 1}
+                    saveLabel={
+                      openItemId === item.id && saveState !== "idle"
+                        ? saveState === "saving"
+                          ? editor.saving
+                          : editor.saved
+                        : undefined
+                    }
+                    onToggle={() => toggleRow(item.id)}
+                    onChange={(settings) => changeSettings(item.id, settings)}
+                    onMove={(delta) => moveBy(item.id, delta)}
+                    onRemove={() => removeExercise(item.id)}
                   />
                 ))}
               </ul>
@@ -291,20 +299,11 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
         </>
       )}
 
-      {sheetItem && (
-        <TemplateExerciseSheet
-          key={sheetItem.id}
-          item={sheetItem}
-          open={openItemId === sheetItem.id}
-          onOpenChange={(open) => (open ? setOpenItemId(sheetItem.id) : closeSheet())}
-          saveState={saveState}
-          canMoveUp={!hasPending && sheetIndex > 0}
-          canMoveDown={!hasPending && sheetIndex < items.length - 1}
-          onChange={(settings) => changeSettings(sheetItem.id, settings)}
-          onMove={(delta) => moveBy(sheetItem.id, delta)}
-          onRemove={() => removeExercise(sheetItem.id)}
-        />
-      )}
+      <AddPlanExerciseSheet
+        exercise={adding}
+        onClose={() => setAdding(null)}
+        onAdd={(exercise, values) => void addExercise(exercise, values)}
+      />
 
       <ExercisePicker
         open={pickerOpen}
@@ -312,7 +311,7 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
         title={strings.plans.picker.title}
         exercises={exercises}
         excludeIds={items.map((item) => item.exercise.id)}
-        onSelect={(exercise) => void addExercise(exercise)}
+        onSelect={setAdding}
       />
     </>
   );

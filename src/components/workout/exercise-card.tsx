@@ -79,30 +79,43 @@ export const ExerciseCard = memo(function ExerciseCard({
         card.done ? "border-success/30 bg-success/5" : "border-hairline",
       )}
     >
-      {/* One line: name (wraps, centered against the fields), weight, reps, done. */}
-      <div className="flex items-center gap-2 py-2 ps-3 pe-2">
+      {/* One line (RTL): done, name (wraps, centered against the fields), weight, reps, and the
+          accordion chevron at the far end. */}
+      <div className="flex items-center gap-2 py-2 ps-1 pe-1">
+        {/* A small, quiet check inside a full 44px touch target. */}
+        <button
+          type="button"
+          onClick={() => actions.toggleDone(card.id)}
+          aria-pressed={card.done}
+          aria-label={copy.doneLabel(name)}
+          className="group/done flex size-11 shrink-0 items-center justify-center rounded-md"
+        >
+          <span
+            className={cn(
+              "flex size-6 items-center justify-center rounded-full border transition-[background-color,border-color,transform] duration-150 group-active/done:scale-90",
+              card.done ? "border-success bg-success text-white" : "border-ink-subtle/60 text-transparent",
+            )}
+          >
+            <CheckIcon aria-hidden="true" className="size-3.5 stroke-[2.5]" />
+          </span>
+        </button>
+
         <button
           type="button"
           onClick={() => actions.toggleExpanded(card.id)}
           aria-expanded={expanded}
           aria-controls={panelId}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-1 text-start"
+          className="flex min-h-11 min-w-0 flex-1 flex-col justify-center text-start"
         >
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-label font-medium wrap-break-word">{name}</span>
-            <span className="text-caption text-ink-muted">
-              {card.replaced && <>{copy.replacedFor(card.replaced.name_he)} · </>}
-              <PlannedSets
-                sets={card.setIds.length}
-                repMin={card.plan?.rep_range_min ?? null}
-                repMax={card.plan?.rep_range_max ?? null}
-              />
-            </span>
+          <span className={cn("text-label font-medium wrap-break-word", card.done && "text-ink-muted")}>{name}</span>
+          <span className="text-caption text-ink-muted">
+            {card.replaced && <>{copy.replacedFor(card.replaced.name_he)} · </>}
+            <PlannedSets
+              sets={card.setIds.length}
+              repMin={card.plan?.rep_range_min ?? null}
+              repMax={card.plan?.rep_range_max ?? null}
+            />
           </span>
-          <ChevronDownIcon
-            aria-hidden="true"
-            className={cn("size-4 shrink-0 text-ink-muted transition-transform duration-200", expanded && "rotate-180")}
-          />
         </button>
 
         <label className="flex w-14 shrink-0 flex-col items-center gap-0.5">
@@ -131,21 +144,23 @@ export const ExerciseCard = memo(function ExerciseCard({
             className={fieldClass}
           />
         </label>
+
         <button
           type="button"
-          onClick={() => actions.toggleDone(card.id)}
-          aria-pressed={card.done}
-          aria-label={copy.doneLabel(name)}
-          className={cn(
-            "mt-[18px] flex size-11 shrink-0 items-center justify-center rounded-md border transition-[background-color,color,transform] duration-150 active:scale-95",
-            card.done ? "border-success bg-success text-white" : "border-hairline bg-surface text-ink-subtle",
-          )}
+          onClick={() => actions.toggleExpanded(card.id)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          aria-label={copy.details(name)}
+          className="flex size-11 shrink-0 items-center justify-center rounded-md text-ink-muted"
         >
-          <CheckIcon aria-hidden="true" className="size-5" />
+          <ChevronDownIcon
+            aria-hidden="true"
+            className={cn("size-5 transition-transform duration-200", expanded && "rotate-180")}
+          />
         </button>
       </div>
       {error && (
-        <p role="alert" className="px-3 pb-2 text-caption text-danger">
+        <p role="alert" className="px-4 pb-2 text-caption text-danger">
           {error === "reps" ? strings.workout.errors.repsRequired : strings.workout.errors.weightRequired}
         </p>
       )}

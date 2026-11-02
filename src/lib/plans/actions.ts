@@ -124,10 +124,13 @@ export async function restoreTemplate(id: unknown): Promise<ActionResult> {
 export async function addTemplateExercise(
   templateId: unknown,
   exerciseId: unknown,
+  settings: unknown,
 ): Promise<ActionResult<{ id: string; position: number }>> {
   await getCurrentUser();
   const parsed = idPair.safeParse({ parentId: templateId, exerciseId });
+  const values = templateExerciseSettingsSchema.safeParse(settings);
   if (!parsed.success) return fail();
+  if (!values.success) return invalid(values.error);
 
   const supabase = await createClient();
   const last = await supabase
@@ -142,7 +145,7 @@ export async function addTemplateExercise(
   // RLS rejects templates the user doesn't own and exercises they can't see.
   const { data, error } = await supabase
     .from("template_exercises")
-    .insert({ template_id: parsed.data.parentId, exercise_id: parsed.data.exerciseId, position })
+    .insert({ template_id: parsed.data.parentId, exercise_id: parsed.data.exerciseId, position, ...values.data })
     .select("id, position")
     .single();
   if (error) return fail();
