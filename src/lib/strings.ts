@@ -219,9 +219,8 @@ export const strings = {
     },
     banner: {
       label: "אימון פתוח",
-      continue: "המשך",
-      delete: "מחיקה",
-      startedAt: (when: string) => `התחלה: ${when}`,
+      continue: "חזרה לאימון",
+      delete: "מחיקת האימון הפתוח",
       elapsed: "זמן שעבר",
     },
     header: {
