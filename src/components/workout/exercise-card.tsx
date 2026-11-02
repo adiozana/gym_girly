@@ -16,7 +16,7 @@ import { memo } from "react";
 import { PlannedSets } from "@/components/plans/planned-sets";
 import { Button } from "@/components/ui/button";
 import { strings } from "@/lib/strings";
-import { formatReps, formatWeight, isWeightOptional } from "@/lib/workout/set-input";
+import { formatReps, formatWeight } from "@/lib/workout/set-input";
 import { canSwap, MAX_SET_COUNT, originalExercise, suggestionFor } from "@/lib/workout/state";
 import type { ExerciseInfo, WorkoutCard } from "@/lib/workout/types";
 
@@ -48,6 +48,9 @@ type ExerciseCardProps = {
   actions: CardActions;
 };
 
+const fieldClass =
+  "h-11 w-full rounded-md border border-hairline bg-surface px-1 text-center text-base font-medium text-ink tabular-nums outline-none placeholder:font-normal placeholder:text-ink-muted focus-visible:border-rose-deep focus-visible:ring-2 focus-visible:ring-rose-deep/25 focus-visible:ring-offset-0 aria-invalid:border-danger";
+
 const dateFormat = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 // One exercise in the workout (SPEC.md): name and plan, ONE weight and reps, and one tap marks
@@ -66,7 +69,6 @@ export const ExerciseCard = memo(function ExerciseCard({
   const suggestion = suggestionFor(card);
   const swappable = canSwap(card);
   const original = originalExercise(card);
-  const optionalWeight = isWeightOptional(card.exercise.equipment);
   const last = card.previous?.sets[0];
 
   return (
@@ -77,37 +79,34 @@ export const ExerciseCard = memo(function ExerciseCard({
         card.done ? "border-success/30 bg-success/5" : "border-hairline",
       )}
     >
-      <button
-        type="button"
-        onClick={() => actions.toggleExpanded(card.id)}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        className="flex min-h-12 w-full items-start gap-2 px-4 pt-3 text-start"
-      >
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="font-medium wrap-break-word">{name}</span>
-          <span className="text-caption text-ink-muted">
-            {card.replaced && <>{copy.replacedFor(card.replaced.name_he)} · </>}
-            <PlannedSets
-              sets={card.setIds.length}
-              repMin={card.plan?.rep_range_min ?? null}
-              repMax={card.plan?.rep_range_max ?? null}
-            />
+      {/* One line: name (wraps, centered against the fields), weight, reps, done. */}
+      <div className="flex items-center gap-2 py-2 ps-3 pe-2">
+        <button
+          type="button"
+          onClick={() => actions.toggleExpanded(card.id)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-1 text-start"
+        >
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-label font-medium wrap-break-word">{name}</span>
+            <span className="text-caption text-ink-muted">
+              {card.replaced && <>{copy.replacedFor(card.replaced.name_he)} · </>}
+              <PlannedSets
+                sets={card.setIds.length}
+                repMin={card.plan?.rep_range_min ?? null}
+                repMax={card.plan?.rep_range_max ?? null}
+              />
+            </span>
           </span>
-        </span>
-        <ChevronDownIcon
-          aria-hidden="true"
-          className={cn("mt-0.5 size-5 shrink-0 text-ink-muted transition-transform duration-200", expanded && "rotate-180")}
-        />
-      </button>
+          <ChevronDownIcon
+            aria-hidden="true"
+            className={cn("size-4 shrink-0 text-ink-muted transition-transform duration-200", expanded && "rotate-180")}
+          />
+        </button>
 
-      {/* One weight and reps for the whole exercise; suggestions show as placeholders. */}
-      <div className="flex items-end gap-2 px-4 pt-2 pb-3">
-        <label className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-caption text-ink-muted">
-            {copy.columns.weight}
-            {optionalWeight && <> ({strings.common.optional})</>}
-          </span>
+        <label className="flex w-14 shrink-0 flex-col items-center gap-0.5">
+          <span className="text-caption text-ink-muted">{copy.columns.weight}</span>
           <input
             inputMode="decimal"
             dir="ltr"
@@ -116,10 +115,10 @@ export const ExerciseCard = memo(function ExerciseCard({
             onChange={(event) => actions.changeWeight(card.id, event.target.value)}
             aria-label={copy.weightLabel(name)}
             aria-invalid={error === "weight"}
-            className="h-12 w-full rounded-md border border-hairline bg-surface px-3 text-center text-base font-medium text-ink tabular-nums outline-none placeholder:font-normal placeholder:text-ink-muted focus-visible:border-rose-deep focus-visible:ring-2 focus-visible:ring-rose-deep/25 focus-visible:ring-offset-0 aria-invalid:border-danger"
+            className={fieldClass}
           />
         </label>
-        <label className="flex min-w-0 flex-1 flex-col gap-1">
+        <label className="flex w-12 shrink-0 flex-col items-center gap-0.5">
           <span className="text-caption text-ink-muted">{copy.columns.reps}</span>
           <input
             inputMode="numeric"
@@ -129,7 +128,7 @@ export const ExerciseCard = memo(function ExerciseCard({
             onChange={(event) => actions.changeReps(card.id, event.target.value)}
             aria-label={copy.repsLabel(name)}
             aria-invalid={error === "reps"}
-            className="h-12 w-full rounded-md border border-hairline bg-surface px-3 text-center text-base font-medium text-ink tabular-nums outline-none placeholder:font-normal placeholder:text-ink-muted focus-visible:border-rose-deep focus-visible:ring-2 focus-visible:ring-rose-deep/25 focus-visible:ring-offset-0 aria-invalid:border-danger"
+            className={fieldClass}
           />
         </label>
         <button
@@ -138,15 +137,15 @@ export const ExerciseCard = memo(function ExerciseCard({
           aria-pressed={card.done}
           aria-label={copy.doneLabel(name)}
           className={cn(
-            "flex size-12 shrink-0 items-center justify-center rounded-md border transition-[background-color,color,transform] duration-150 active:scale-95",
+            "mt-[18px] flex size-11 shrink-0 items-center justify-center rounded-md border transition-[background-color,color,transform] duration-150 active:scale-95",
             card.done ? "border-success bg-success text-white" : "border-hairline bg-surface text-ink-subtle",
           )}
         >
-          <CheckIcon aria-hidden="true" className="size-6" />
+          <CheckIcon aria-hidden="true" className="size-5" />
         </button>
       </div>
       {error && (
-        <p role="alert" className="px-4 pb-3 text-caption text-danger">
+        <p role="alert" className="px-3 pb-2 text-caption text-danger">
           {error === "reps" ? strings.workout.errors.repsRequired : strings.workout.errors.weightRequired}
         </p>
       )}
