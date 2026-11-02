@@ -292,7 +292,7 @@ isOneToOne: false
 { Args: { "p_template_exercise_id": string }; Returns: boolean
                            },
 "previous_performance":
-{ Args: { "p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
+{ Args: { "p_before"?: string,"p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
               "exercise_id": string,"note": string,"reps": number,"session_id": string,"set_number": number,"started_at": string,"weight_kg": number
             }[]
                            },

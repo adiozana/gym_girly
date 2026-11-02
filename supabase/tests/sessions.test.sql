@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(21);
 
 insert into auth.users (id, email, aud, role, raw_user_meta_data) values
   ('11111111-1111-1111-1111-111111111111', 'alice@users.gymtracker.local', 'authenticated', 'authenticated', '{"username":"alice"}'),
@@ -132,6 +132,12 @@ select results_eq(
 select is_empty(
   $$select 1 from public.previous_performance(array['00000000-0000-4000-8000-000000000053']::uuid[], (select id from s2))$$,
   'the excluded session is skipped'
+);
+
+select is_empty(
+  $$select 1 from public.previous_performance(array['00000000-0000-4000-8000-000000000040']::uuid[], null,
+      (select started_at from public.workout_sessions where id = (select id from s1)))$$,
+  'p_before only looks at workouts that started earlier'
 );
 
 -- A session with nothing done is not saved

@@ -7,6 +7,9 @@ import { TopBar } from "@/components/layout/top-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListSkeleton } from "@/components/shared/list-skeleton";
 import { getExercise, listExercises } from "@/lib/exercises/queries";
+import { getExerciseHistory } from "@/lib/history/queries";
+import { formatWeight } from "@/lib/workout/set-input";
+import { formatDate } from "@/lib/format-date";
 import { strings } from "@/lib/strings";
 import { idSchema } from "@/lib/validation/common";
 
@@ -25,7 +28,9 @@ export default function ExercisePage({ params }: PageProps<"/exercises/[id]">) {
 async function Exercise({ params }: { params: PageProps<"/exercises/[id]">["params"] }) {
   const { id } = await params;
   const valid = idSchema.safeParse(id).success;
-  const [exercise, library] = valid ? await Promise.all([getExercise(id), listExercises()]) : [null, null];
+  const [exercise, library, history] = valid
+    ? await Promise.all([getExercise(id), listExercises(), getExerciseHistory(id)])
+    : [null, null, []];
 
   if (!exercise) {
     return (
@@ -88,9 +93,35 @@ async function Exercise({ params }: { params: PageProps<"/exercises/[id]">["para
         )}
       </section>
 
-      <section className="mt-8 flex flex-col">
+      <section className="mt-8 flex flex-col gap-2">
         <h2 className="text-section font-medium">{detail.history}</h2>
-        <EmptyState icon={ChartBarIcon} title={detail.historyEmpty} />
+        {history.length === 0 ? (
+          <EmptyState icon={ChartBarIcon} title={detail.historyEmpty} />
+        ) : (
+          <ul className="divide-y divide-hairline rounded-md border border-hairline bg-surface">
+            {history.map((entry) => {
+              const first = entry.sets[0];
+              const value = strings.workout.details.setValue(
+                first.weight_kg == null ? null : formatWeight(first.weight_kg),
+                first.reps,
+              );
+              return (
+                <li key={entry.sessionId}>
+                  <Link href={`/sessions/${entry.sessionId}`} className="flex min-h-14 items-center gap-3 px-4 py-2 active:bg-blush/60">
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <bdi className="tabular-nums">{formatDate(entry.date)}</bdi>
+                      <span className="text-caption text-ink-muted">
+                        <bdi>{detail.historyLine(entry.sets.length, value)}</bdi>
+                        {entry.template_name && <> · {entry.template_name}</>}
+                      </span>
+                    </span>
+                    <ChevronRightIcon aria-hidden="true" className="size-5 shrink-0 text-ink-subtle rtl:-scale-x-100" />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       {exercise.is_personal ? (

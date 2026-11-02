@@ -15,6 +15,7 @@ import { cn } from "cn";
 import { memo } from "react";
 import { PlannedSets } from "@/components/plans/planned-sets";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format-date";
 import { strings } from "@/lib/strings";
 import { formatReps, formatWeight } from "@/lib/workout/set-input";
 import { canSwap, MAX_SET_COUNT, originalExercise, suggestionFor } from "@/lib/workout/state";
@@ -51,7 +52,6 @@ type ExerciseCardProps = {
 const fieldClass =
   "h-11 w-full rounded-md border border-hairline bg-surface px-1 text-center text-base font-medium text-ink tabular-nums outline-none placeholder:font-normal placeholder:text-ink-muted focus-visible:border-rose-deep focus-visible:ring-2 focus-visible:ring-rose-deep/25 focus-visible:ring-offset-0 aria-invalid:border-danger";
 
-const dateFormat = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 // One exercise in the workout (SPEC.md): name and plan, ONE weight and reps, and one tap marks
 // all its sets done. Tapping the name opens an accordion with instructions, the 2 alternatives,
@@ -231,7 +231,7 @@ export const ExerciseCard = memo(function ExerciseCard({
                   {" · "}
                   {strings.plans.editor.setsOnly(card.previous.sets.length)}
                   {" · "}
-                  <bdi>{dateFormat.format(new Date(card.previous.startedAt))}</bdi>
+                  <bdi>{formatDate(card.previous.startedAt)}</bdi>
                 </p>
               ) : (
                 <p className="text-label text-ink-muted">{details.historyEmpty}</p>

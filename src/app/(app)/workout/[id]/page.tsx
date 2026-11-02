@@ -26,8 +26,8 @@ async function Workout({ params }: { params: PageProps<"/workout/[id]">["params"
 
   const data = await getWorkout(id);
   if (data.status === "not_found") return <NotFound />;
-  // A saved workout isn't edited here (stage 4 adds its summary and details pages).
-  if (data.status === "completed") redirect("/");
+  // A saved workout opens its summary; it is edited from its details page (/sessions/[id]).
+  if (data.status === "completed") redirect(`/workout/${id}/summary`);
 
   return <WorkoutLoader workout={data.workout} library={data.library} />;
 }

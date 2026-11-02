@@ -1,13 +1,13 @@
 "use client";
 
 import { ClockIcon } from "@heroicons/react/24/outline";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format-date";
 import { strings } from "@/lib/strings";
 import { useIsClient } from "@/lib/use-is-client";
 import { deleteSession } from "@/lib/workout/actions";
@@ -50,7 +50,7 @@ export function ActiveSessionBanner({ session }: { session: ActiveSession }) {
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-ink-muted">
           {/* Local date and time: rendered on the device, in its time zone. */}
           <span className={isClient ? undefined : "invisible"}>
-            {workout.banner.startedAt(isClient ? format(new Date(session.started_at), "dd/MM/yyyy · HH:mm") : "00/00/0000 · 00:00")}
+            {workout.banner.startedAt(isClient ? formatDateTime(session.started_at) : "00/00/0000 · 00:00")}
           </span>
           <span className="flex items-center gap-1">
             <ClockIcon aria-hidden="true" className="size-5" />

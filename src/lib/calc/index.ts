@@ -5,3 +5,4 @@ export * from "./day-status";
 export * from "./streak";
 export * from "./challenge";
 export * from "./progress";
+export * from "./summary";

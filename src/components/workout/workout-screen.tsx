@@ -38,8 +38,8 @@ import { WorkoutHeader } from "./workout-header";
 
 const { workout: copy } = strings;
 
-// Where a saved workout leads. Stage 4 changes this to the workout summary.
-export const WORKOUT_SAVED_PATH = "/";
+// A saved workout opens its summary (SPEC.md "סיכום אימון").
+export const workoutSummaryPath = (sessionId: string) => `/workout/${sessionId}/summary`;
 
 type PickerMode = { kind: "add" } | { kind: "swap"; cardId: string } | { kind: "extra"; cardId: string } | null;
 type DialogKind = "confirmSave" | "nothingDone" | "delete" | null;
@@ -338,7 +338,7 @@ export function WorkoutScreen({ workout, library }: { workout: WorkoutData; libr
     stop();
     clearDraft(sessionId);
     toast.success(copy.saved);
-    router.replace(WORKOUT_SAVED_PATH);
+    router.replace(workoutSummaryPath(sessionId));
   }
 
   function requestSave() {
