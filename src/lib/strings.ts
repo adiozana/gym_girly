@@ -455,5 +455,7 @@ export const strings = {
     pageTitle: "לא הצלחנו לטעון את המסך.",
     retry: "ניסיון חוזר",
     generic: "משהו השתבש. אפשר לנסות שוב.",
+    notFound: "העמוד לא נמצא.",
+    backHome: "חזרה לבית",
   },
 } as const;

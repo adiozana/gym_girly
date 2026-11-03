@@ -95,8 +95,10 @@ export function MonthCalendar({ goals, sessions, today, month, onMonthChange }: 
             <tr key={i}>
               {week.map((date, j) => {
                 if (!date) return <td key={j} />;
-                const status = getDayStatus(date, goals, completed, today);
                 const hasWorkout = byDate.has(date);
+                // Without a goal a day has no status, but a workout still marks it like a trained day.
+                const goalStatus = getDayStatus(date, goals, completed, today);
+                const status: DayStatus = goalStatus === "no_goal" && hasWorkout ? "trained" : goalStatus;
                 const isToday = date === today;
                 const label = `${formatDate(date)} · ${copy.status[status]}${status === "rest" && hasWorkout ? ` · ${copy.workoutOnRest}` : ""}`;
                 const content = (

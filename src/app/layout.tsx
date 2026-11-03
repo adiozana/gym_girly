@@ -11,8 +11,11 @@ const assistant = Assistant({
 });
 
 export const metadata: Metadata = {
-  title: strings.app.name,
+  title: { default: strings.app.name, template: `%s · ${strings.app.name}` },
   description: strings.app.description,
+  applicationName: strings.app.name,
+  // iOS: full-screen from the home screen, with the app's own name under the icon.
+  appleWebApp: { capable: true, title: strings.app.name, statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

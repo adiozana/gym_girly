@@ -54,6 +54,17 @@ supabase db push --include-seed     # migrations + seed
 | --- | --- |
 | `npm test` | בדיקות יחידה (Vitest) |
 | `npm run test:integration` | בדיקות אינטגרציה מול Supabase המקומי: הרשמה, התחברות ובידוד בין משתמשים (דורש `supabase start`) |
+| `npm run test:e2e` | בדיקת הזרימה המלאה ב-Playwright: בונה ומריץ את האפליקציה על פורט 3100 מול Supabase המקומי (דורש `supabase start`) |
 | `npm run typecheck` | בדיקת טיפוסים (TypeScript strict) |
 | `npm run lint` | ESLint |
 | `npm run build` | build לפרודקשן |
+
+## דיפלוי
+
+האפליקציה מחוברת ל-Vercel דרך ה-repo ב-GitHub: כל push ל-`main` מעלה גרסה חדשה.
+משתני הסביבה ב-Vercel הם אותם שניים שב-`.env.example`, עם הערכים של הפרויקט בענן.
+שינויי סכמה עולים לענן בנפרד: `supabase db push --linked` (ועם `--include-seed` כשהספרייה המובנית משתנה).
+
+## התקנה על הטלפון
+
+פותחים את כתובת האפליקציה בדפדפן ובוחרים "הוספה למסך הבית" (ב-iPhone: כפתור השיתוף ב-Safari).

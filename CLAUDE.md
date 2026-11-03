@@ -17,7 +17,7 @@
 - Supabase env vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (the spec's `ANON_KEY` was renamed by the user's decision).
 
 ## Commands
-`npm run dev` · `npm test` · `npm run test:integration` (needs `supabase start`) · `npm run typecheck` · `npm run lint` · `npm run build` · `npm run db:reset` (local DB from scratch) · `npm run db:test` (pgTAP RLS/seed tests) · `npm run db:types`
+`npm run dev` · `npm test` · `npm run test:integration` and `npm run test:e2e` (need `supabase start`) · `npm run typecheck` · `npm run lint` · `npm run build` · `npm run db:reset` (local DB from scratch) · `npm run db:test` (pgTAP RLS/seed tests) · `npm run db:types`
 
 ## Conventions
 - Code, identifiers, table names and code comments in English. All UI text in Hebrew, only in `src/lib/strings.ts`.
