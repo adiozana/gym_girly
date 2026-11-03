@@ -9,7 +9,7 @@ describe("authRedirectFor", () => {
     },
   );
 
-  it.each(["/login", "/signup", "/auth/callback"])("lets signed-out users open %s", (path) => {
+  it.each(["/login", "/signup", "/auth/callback", "/auth/reset"])("lets signed-out users open %s", (path) => {
     expect(authRedirectFor(path, false)).toBeNull();
   });
 
@@ -17,7 +17,7 @@ describe("authRedirectFor", () => {
     expect(authRedirectFor(path, true)).toBe("/");
   });
 
-  it.each(["/", "/settings"])("lets signed-in users open %s", (path) => {
+  it.each(["/", "/settings", "/auth/callback", "/auth/reset"])("lets signed-in users open %s", (path) => {
     expect(authRedirectFor(path, true)).toBeNull();
   });
 });

@@ -2,7 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { LOGIN_PATH } from "./routes";
+import { LOGIN_PATH, SESSION_RESET_PATH } from "./routes";
 
 export type CurrentUser = {
   id: string;
@@ -22,7 +22,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   if (!claims?.sub) redirect(LOGIN_PATH);
 
   const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", claims.sub).single();
-  if (!profile) redirect(LOGIN_PATH);
+  // A valid token without a profile means the account was deleted: clear the stale cookie,
+  // or the proxy (which trusts the token) and this check would bounce between / and /login.
+  if (!profile) redirect(SESSION_RESET_PATH);
 
   const metadata = (claims.user_metadata ?? {}) as Record<string, unknown>;
   const suggested = typeof metadata.full_name === "string" ? metadata.full_name : typeof metadata.name === "string" ? metadata.name : null;
