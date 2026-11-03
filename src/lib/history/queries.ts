@@ -136,29 +136,3 @@ export async function getExerciseHistory(exerciseId: string): Promise<ExerciseHi
     }))
     .filter((entry) => entry.sets.length > 0);
 }
-
-export type SessionListItem = {
-  id: string;
-  session_date: string;
-  template_name: string | null;
-  exercise_count: number;
-};
-
-// Completed workouts, newest first. Stage 5 puts the monthly calendar above this list.
-export async function listCompletedSessions(): Promise<SessionListItem[]> {
-  await getCurrentUser();
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .select("id, session_date, template_name, started_at, session_exercises(count)")
-    .eq("status", "completed")
-    .order("started_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  return data.map((row) => ({
-    id: row.id,
-    session_date: row.session_date,
-    template_name: row.template_name,
-    exercise_count: row.session_exercises[0]?.count ?? 0,
-  }));
-}

@@ -4,8 +4,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SettingsGoals } from "@/components/dashboard/settings-goals";
 import { signOut } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getGoalData } from "@/lib/dashboard/queries";
+import { listTemplates } from "@/lib/plans/queries";
 import { strings } from "@/lib/strings";
 
 export const metadata: Metadata = { title: strings.settings.title };
@@ -25,12 +28,18 @@ export default function SettingsPage() {
         <h1 className="text-section font-medium">{strings.settings.title}</h1>
       </header>
 
-      <section className="flex flex-col gap-1 rounded-md border border-hairline bg-surface p-4 mt-4">
+      <section className="mt-4 flex flex-col gap-1 rounded-md border border-hairline bg-surface p-4">
         <p className="text-caption text-ink-muted">{strings.auth.usernameLabel}</p>
         <Suspense fallback={<Skeleton className="h-6 w-24" />}>
           <Username />
         </Suspense>
       </section>
+
+      <div className="mt-6">
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <Goals />
+        </Suspense>
+      </div>
 
       {/* Dangerous actions sit apart from the rest, at the bottom (design skill). */}
       <form action={signOut} className="mt-auto pt-10">
@@ -49,4 +58,9 @@ async function Username() {
       {user.username}
     </p>
   );
+}
+
+async function Goals() {
+  const [data, templates] = await Promise.all([getGoalData(), listTemplates()]);
+  return <SettingsGoals data={data} plans={templates.active.map((plan) => ({ id: plan.id, name: plan.name }))} />;
 }

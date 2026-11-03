@@ -2,14 +2,16 @@ import { Cog6ToothIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dashboard } from "@/components/dashboard/dashboard";
 import { ActiveSessionBanner } from "@/components/workout/active-session-banner";
 import { StartWorkout } from "@/components/workout/start-workout";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listTemplates } from "@/lib/plans/queries";
 import { strings } from "@/lib/strings";
 import { getActiveSession } from "@/lib/workout/queries";
+import { getGoalData } from "@/lib/dashboard/queries";
 
-// Home until the dashboard is built (stage 5): greeting and starting or continuing a workout.
+// Home (SPEC.md "דשבורד").
 export default function HomePage() {
   return (
     <>
@@ -24,19 +26,32 @@ export default function HomePage() {
         </Link>
       </header>
 
-      <section className="flex flex-col gap-2 pt-6">
+      <section className="pt-4">
         <Suspense fallback={<Skeleton className="h-[34px] w-40" />}>
           <Greeting />
         </Suspense>
-        <p className="text-ink-muted">{strings.home.placeholder}</p>
       </section>
 
-      <div className="pt-8">
-        <Suspense fallback={<Skeleton className="h-12 w-full" />}>
-          <WorkoutEntry />
-        </Suspense>
-      </div>
+      {/* SPEC.md order: start / continue, today and the streak, the month, the challenge. */}
+      <Suspense fallback={<Skeleton className="mt-6 h-96 w-full" />}>
+        <Home />
+      </Suspense>
     </>
+  );
+}
+
+async function Home() {
+  const [active, templates, goalData] = await Promise.all([getActiveSession(), listTemplates(), getGoalData()]);
+  const plans = templates.active.map((plan) => ({ id: plan.id, name: plan.name }));
+  return (
+    <div className="flex flex-col gap-8 pt-6">
+      {active ? (
+        <ActiveSessionBanner session={active} />
+      ) : (
+        <StartWorkout plans={templates.active} goals={goalData.goals} />
+      )}
+      <Dashboard data={goalData} plans={plans} />
+    </div>
   );
 }
 
@@ -47,11 +62,4 @@ async function Greeting() {
       {strings.home.greeting} <bdi>{user.username}</bdi>
     </h1>
   );
-}
-
-// An open workout replaces the start button (SPEC.md: a new one doesn't start while one is open).
-async function WorkoutEntry() {
-  const [active, templates] = await Promise.all([getActiveSession(), listTemplates()]);
-  if (active) return <ActiveSessionBanner session={active} />;
-  return <StartWorkout plans={templates.active} />;
 }

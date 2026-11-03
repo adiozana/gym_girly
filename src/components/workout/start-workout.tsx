@@ -13,23 +13,28 @@ import type { TemplateSummary } from "@/lib/plans/types";
 import { strings } from "@/lib/strings";
 import { useOnHidden } from "@/lib/use-on-hidden";
 import { startSession } from "@/lib/workout/actions";
+import type { StoredGoal } from "@/lib/dashboard/queries";
+import { plannedTemplateFor } from "@/lib/dashboard/today";
+import { useToday } from "@/lib/use-today";
 
 const { workout } = strings;
 
 type StartWorkoutProps = {
   plans: TemplateSummary[];
-  // The plan scheduled for today (stage 5): pinned first and marked.
-  suggestedTemplateId?: string | null;
+  // The goal decides today's plan (fixed weekdays with a plan), which is pinned first and marked.
+  goals: StoredGoal[];
 };
 
 // "Start workout": a sheet to choose a plan or a free workout (SPEC.md "בחירת אימון").
-export function StartWorkout({ plans, suggestedTemplateId }: StartWorkoutProps) {
+export function StartWorkout({ plans, goals }: StartWorkoutProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   // Which row is starting ("free" for a free workout); stays set until the page is left.
   const [starting, setStarting] = useState<string | null>(null);
   useOnHidden(() => setStarting(null));
 
+  const today = useToday();
+  const suggestedTemplateId = today ? plannedTemplateFor(goals, today)?.id : undefined;
   const suggested = plans.find((plan) => plan.id === suggestedTemplateId);
   const ordered = suggested ? [suggested, ...plans.filter((plan) => plan !== suggested)] : plans;
 
