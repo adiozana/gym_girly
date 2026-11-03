@@ -35,6 +35,8 @@ export const strings = {
     core: "בטן",
     full_body: "גוף מלא",
     cardio: "אירובי",
+    warmup: "חימום",
+    stretching: "מתיחות",
   } satisfies Record<MuscleGroup, string>,
   equipment: {
     machine: "מכונה",

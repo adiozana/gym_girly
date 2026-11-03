@@ -322,7 +322,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "challenge_status": "active"|"succeeded"|"failed","equipment": "machine"|"barbell"|"dumbbell"|"cable"|"bodyweight"|"kettlebell"|"band"|"other","goal_type": "fixed_days"|"cycle","muscle_group": "chest"|"back"|"shoulders"|"biceps"|"triceps"|"legs"|"glutes"|"core"|"full_body"|"cardio","session_status": "in_progress"|"completed"
+            "challenge_status": "active"|"succeeded"|"failed","equipment": "machine"|"barbell"|"dumbbell"|"cable"|"bodyweight"|"kettlebell"|"band"|"other","goal_type": "fixed_days"|"cycle","muscle_group": "chest"|"back"|"shoulders"|"biceps"|"triceps"|"legs"|"glutes"|"core"|"full_body"|"cardio"|"warmup"|"stretching","session_status": "in_progress"|"completed"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -442,7 +442,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "challenge_status": ["active", "succeeded", "failed"],"equipment": ["machine", "barbell", "dumbbell", "cable", "bodyweight", "kettlebell", "band", "other"],"goal_type": ["fixed_days", "cycle"],"muscle_group": ["chest", "back", "shoulders", "biceps", "triceps", "legs", "glutes", "core", "full_body", "cardio"],"session_status": ["in_progress", "completed"]
+            "challenge_status": ["active", "succeeded", "failed"],"equipment": ["machine", "barbell", "dumbbell", "cable", "bodyweight", "kettlebell", "band", "other"],"goal_type": ["fixed_days", "cycle"],"muscle_group": ["chest", "back", "shoulders", "biceps", "triceps", "legs", "glutes", "core", "full_body", "cardio", "warmup", "stretching"],"session_status": ["in_progress", "completed"]
           }
         }
 } as const

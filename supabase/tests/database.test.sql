@@ -15,8 +15,8 @@ select is(
 
 select is(
   (select count(*)::int from public.exercises where user_id is null),
-  80,
-  'seed loads 80 built-in exercises'
+  104,
+  'seed loads 104 built-in exercises'
 );
 
 select is(
@@ -106,8 +106,8 @@ select set_config('request.jwt.claims',
 
 select is(
   (select count(*)::int from public.exercises),
-  80,
-  'bob sees the 80 built-in exercises but not alice''s private one'
+  104,
+  'bob sees the 104 built-in exercises but not alice''s private one'
 );
 
 select results_eq(
