@@ -82,3 +82,10 @@ export function sanitizeDraft(
   const name = raw.name.trim().slice(0, 60) || fallbackName;
   return { draft: { name, exercises }, dropped };
 }
+
+// True when a turn recognized nothing: the draft has no exercises, or nothing in it changed
+// (same name and the same exercises with the same settings).
+export function recognizedNothing(before: PlanDraft, after: PlanDraft): boolean {
+  if (after.exercises.length === 0) return true;
+  return before.name === after.name && JSON.stringify(before.exercises) === JSON.stringify(after.exercises);
+}

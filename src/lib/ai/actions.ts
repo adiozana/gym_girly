@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { idSchema } from "@/lib/validation/common";
 import { templateExerciseSettingsSchema, templateNameSchema } from "@/lib/validation/plans";
 import { GeminiError, generateJson, type JsonSchema } from "./gemini";
-import { draftResponseSchema, MAX_DRAFT_EXERCISES, sanitizeDraft, type PlanDraft } from "./plan-draft";
+import { draftResponseSchema, MAX_DRAFT_EXERCISES, recognizedNothing, sanitizeDraft, type PlanDraft } from "./plan-draft";
 
 const { planAssistant: copy } = strings;
 
@@ -117,6 +117,8 @@ export async function draftPlanTurn(conversation: unknown, currentDraft: unknown
     exercises: parsed.data.exercises.map((e) => ({ ...e, exercise_id: idByRef.get(e.exercise_id.trim()) ?? e.exercise_id })),
   };
   const { draft: next } = sanitizeDraft(withIds, new Set(active.map((e) => e.id)), copy.defaultName);
+  // Nothing recognized (no plan, or nothing changed): a fixed reply, whatever the model said.
+  if (recognizedNothing(draft.data, next)) return ok({ draft: draft.data, message: copy.notRecognized });
   return ok({ draft: next, message: parsed.data.message.trim().slice(0, 600) || copy.fallbackMessage });
 }
 

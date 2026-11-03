@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeDraft, type DraftResponse } from "./plan-draft";
+import { recognizedNothing, sanitizeDraft, type DraftResponse } from "./plan-draft";
 
 const known = new Set(["squat", "press", "curl"]);
 const response = (exercises: DraftResponse["exercises"], name = "רגליים"): DraftResponse => ({ name, exercises, message: "" });
@@ -46,5 +46,21 @@ describe("sanitizeDraft", () => {
   it("falls back to a default name and trims long ones", () => {
     expect(sanitizeDraft(response([], "  "), known, "תוכנית חדשה").draft.name).toBe("תוכנית חדשה");
     expect(sanitizeDraft(response([], "א".repeat(80)), known, "x").draft.name).toHaveLength(60);
+  });
+});
+
+describe("recognizedNothing", () => {
+  const squat = { exercise_id: "squat", planned_sets: 3, rep_range_min: null, rep_range_max: null, target_weight_kg: null, note: null };
+  const draft = { name: "רגליים", exercises: [squat] };
+
+  it("is true for an empty draft or an unchanged one", () => {
+    expect(recognizedNothing({ name: "x", exercises: [] }, { name: "x", exercises: [] })).toBe(true);
+    expect(recognizedNothing(draft, { ...draft, exercises: [{ ...squat }] })).toBe(true);
+  });
+
+  it("is false when exercises, settings or the name changed", () => {
+    expect(recognizedNothing({ name: "x", exercises: [] }, draft)).toBe(false);
+    expect(recognizedNothing(draft, { ...draft, exercises: [{ ...squat, planned_sets: 4 }] })).toBe(false);
+    expect(recognizedNothing(draft, { ...draft, name: "רגליים א׳" })).toBe(false);
   });
 });

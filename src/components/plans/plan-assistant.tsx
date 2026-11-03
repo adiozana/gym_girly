@@ -31,6 +31,7 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
   const [draft, setDraft] = useState<PlanDraft>(emptyDraft);
   const [text, setText] = useState("");
   const [confirmingClose, setConfirmingClose] = useState(false);
+  const [confirmingRestart, setConfirmingRestart] = useState(false);
   const [thinking, startThinking] = useTransition();
   const [saving, startSaving] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,13 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
   }
 
   function send() {
+    if (thinking) return;
     const message = text.trim();
-    if (!message || thinking) return;
+    // An empty message recognizes nothing; answered here without calling the model.
+    if (!message) {
+      setTurns([...turns, { role: "model", text: copy.notRecognized }]);
+      return;
+    }
     const next = [...turns, { role: "user" as const, text: message }];
     setTurns(next);
     setText("");
@@ -109,12 +115,6 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
               <textarea
                 value={text}
                 onChange={(event) => setText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    send();
-                  }
-                }}
                 aria-label={copy.inputLabel}
                 placeholder={copy.inputPlaceholder}
                 rows={2}
@@ -122,7 +122,7 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
                 dir="auto"
                 className="min-h-12 flex-1 resize-none rounded-md border border-hairline bg-surface px-4 py-3 text-base outline-none placeholder:text-ink-subtle focus-visible:border-rose-deep focus-visible:ring-2 focus-visible:ring-rose-deep/25 focus-visible:ring-offset-0"
               />
-              <Button type="submit" variant="outline" size="icon" aria-label={copy.send} disabled={!text.trim() || thinking}>
+              <Button type="submit" variant="outline" size="icon" aria-label={copy.send} disabled={thinking}>
                 {/* "Send" points to the end side, which is left in RTL. */}
                 <PaperAirplaneIcon aria-hidden="true" className="rtl:-scale-x-100" />
               </Button>
@@ -136,6 +136,18 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
       >
         <div className="flex flex-col gap-4">
           <p className="rounded-md bg-blush px-4 py-3 text-label text-ink">{copy.intro}</p>
+          {turns.length > 0 && (
+            <Button
+              variant="link"
+              className="self-start px-0"
+              disabled={thinking || saving}
+              // Asks first only when there is a plan to lose.
+              onClick={() => (draft.exercises.length > 0 ? setConfirmingRestart(true) : reset())}
+            >
+              <ArrowPathIcon aria-hidden="true" />
+              {copy.restart}
+            </Button>
+          )}
 
           <ol className="flex flex-col gap-2" aria-live="polite">
             {turns.map((turn, index) => (
@@ -199,6 +211,19 @@ export function PlanAssistant({ exercises }: { exercises: ExerciseSummary[] }) {
         </div>
       </Sheet>
 
+      <ConfirmDialog
+        open={confirmingRestart}
+        onOpenChange={setConfirmingRestart}
+        title={copy.restartTitle}
+        description={copy.restartBody}
+        confirmLabel={copy.restart}
+        confirmVariant="danger"
+        cancelLabel={copy.keepEditing}
+        onConfirm={() => {
+          setConfirmingRestart(false);
+          reset();
+        }}
+      />
       <ConfirmDialog
         open={confirmingClose}
         onOpenChange={setConfirmingClose}
