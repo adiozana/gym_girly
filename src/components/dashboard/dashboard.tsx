@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { currentStreak, evaluateChallenge, getDayStatus, longestStreak } from "@/lib/calc";
 import { settleChallenge } from "@/lib/dashboard/actions";
-import { monthOf, type MonthKey } from "@/lib/dashboard/calendar";
 import type { ChallengeRow, GoalData } from "@/lib/dashboard/queries";
 import { activeGoal, plannedTemplateFor } from "@/lib/dashboard/today";
 import { strings } from "@/lib/strings";
@@ -15,7 +14,6 @@ import { useToday } from "@/lib/use-today";
 import { ProgressSection } from "@/components/progress/progress-section";
 import { ChallengeCard } from "./challenge-card";
 import { GoalSheet } from "./goal-sheet";
-import { MonthCalendar } from "./month-calendar";
 
 const { dashboard: copy } = strings;
 
@@ -25,8 +23,8 @@ type DashboardProps = {
   progress: ProgressPlan[];
 };
 
-// Home below the start button (SPEC.md order): today and the streak, the month, the challenge,
-// and the progress chart.
+// Home below the start button (SPEC.md order): today and the streak, the challenge, and the
+// progress chart. The month calendar lives in the history tab only (decided with Adi).
 // Everything here depends on the device's "today", so it renders on the client.
 export function Dashboard(props: DashboardProps) {
   const today = useToday();
@@ -35,7 +33,6 @@ export function Dashboard(props: DashboardProps) {
 }
 
 function DashboardForDay({ data, plans, progress, today }: DashboardProps & { today: string }) {
-  const [month, setMonth] = useState<MonthKey>(() => monthOf(today));
   const [editingGoal, setEditingGoal] = useState(false);
   const [justEnded, setJustEnded] = useState<ChallengeRow | null>(null);
   const settling = useRef(false);
@@ -105,8 +102,6 @@ function DashboardForDay({ data, plans, progress, today }: DashboardProps & { to
           </Button>
         </section>
       )}
-
-      <MonthCalendar goals={data.goals} sessions={data.sessions} today={today} month={month} onMonthChange={setMonth} />
 
       <ChallengeCard
         active={justEnded ? null : active}

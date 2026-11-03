@@ -33,7 +33,7 @@ export default function HomePage() {
         </Suspense>
       </section>
 
-      {/* SPEC.md order: start / continue, today and the streak, the month, the challenge. */}
+      {/* SPEC.md order: start / continue, today and the streak, the challenge, progress. */}
       <Suspense fallback={<Skeleton className="mt-6 h-96 w-full" />}>
         <Home />
       </Suspense>
