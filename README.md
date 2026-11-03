@@ -62,7 +62,7 @@ supabase db push --include-seed     # migrations + seed
 ## דיפלוי
 
 האפליקציה מחוברת ל-Vercel דרך ה-repo ב-GitHub: כל push ל-`main` מעלה גרסה חדשה.
-משתני הסביבה ב-Vercel הם אותם שניים שב-`.env.example`, עם הערכים של הפרויקט בענן.
+משתני הסביבה ב-Vercel הם אלה שב-`.env.example`: שני משתני Supabase עם הערכים של הפרויקט בענן, ו-`GEMINI_API_KEY` לעוזר "תוכנית מהירה" (בצד השרת בלבד).
 שינויי סכמה עולים לענן בנפרד: `supabase db push --linked` (ועם `--include-seed` כשהספרייה המובנית משתנה).
 
 ## התקנה על הטלפון

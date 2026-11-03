@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PlanList } from "@/components/plans/plan-list";
 import { ListSkeleton } from "@/components/shared/list-skeleton";
+import { listExercises } from "@/lib/exercises/queries";
 import { listTemplates } from "@/lib/plans/queries";
 import { strings } from "@/lib/strings";
 
@@ -16,6 +17,6 @@ export default function PlansPage() {
 }
 
 async function Plans() {
-  const { active, archived } = await listTemplates();
-  return <PlanList active={active} archived={archived} />;
+  const [{ active, archived }, library] = await Promise.all([listTemplates(), listExercises()]);
+  return <PlanList active={active} archived={archived} exercises={library.active} />;
 }

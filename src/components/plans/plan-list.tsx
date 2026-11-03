@@ -5,16 +5,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TopBar } from "@/components/layout/top-bar";
+import { PlanAssistant } from "@/components/plans/plan-assistant";
 import { PlanMenu } from "@/components/plans/plan-menu";
 import { PlanNameSheet } from "@/components/plans/plan-name-sheet";
 import { ArchivedSection } from "@/components/shared/archived-section";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { createTemplate } from "@/lib/plans/actions";
+import type { ExerciseSummary } from "@/lib/exercises/types";
 import type { TemplateSummary } from "@/lib/plans/types";
 import { strings } from "@/lib/strings";
 
-export function PlanList({ active, archived }: { active: TemplateSummary[]; archived: TemplateSummary[] }) {
+export function PlanList({
+  active,
+  archived,
+  exercises,
+}: {
+  active: TemplateSummary[];
+  archived: TemplateSummary[];
+  exercises: ExerciseSummary[];
+}) {
   const router = useRouter();
   const [creating, setCreating] = useState(false);
 
@@ -34,7 +44,12 @@ export function PlanList({ active, archived }: { active: TemplateSummary[]; arch
           icon={ClipboardDocumentListIcon}
           title={strings.plans.emptyTitle}
           body={strings.plans.emptyBody}
-          action={newPlanButton}
+          action={
+            <div className="flex flex-col gap-3">
+              {newPlanButton}
+              <PlanAssistant exercises={exercises} />
+            </div>
+          }
         />
       ) : (
         <>
@@ -45,7 +60,10 @@ export function PlanList({ active, archived }: { active: TemplateSummary[]; arch
               </li>
             ))}
           </ul>
-          <div className="mt-6">{newPlanButton}</div>
+          <div className="mt-6 flex flex-col gap-3">
+            {newPlanButton}
+            <PlanAssistant exercises={exercises} />
+          </div>
         </>
       )}
 
