@@ -30,6 +30,7 @@ export const strings = {
     shoulders: "כתפיים",
     biceps: "יד קדמית",
     triceps: "יד אחורית",
+    forearms: "אמות",
     legs: "רגליים",
     glutes: "ישבן",
     core: "בטן",
@@ -37,7 +38,6 @@ export const strings = {
     cardio: "אירובי",
     warmup: "חימום",
     stretching: "מתיחות",
-    forearms: "אמות",
   } satisfies Record<MuscleGroup, string>,
   equipment: {
     machine: "מכונה",
