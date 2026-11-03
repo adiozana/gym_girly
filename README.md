@@ -41,7 +41,7 @@
 | עורך תוכנית | `/plans/[id]` | שורה לכל תרגיל, עריכה באקורדיון (סטים, משקל נוכחי, טווח חזרות, הערה) ושינוי סדר בגרירה. |
 | היסטוריה | `/history` | לוח חודשי עם סטטוס לכל יום, ורשימת האימונים של החודש. |
 | פרטי אימון | `/sessions/[id]` | עריכת משקל, חזרות וסטים של אימון שעבר, והסרת תרגיל או מחיקת האימון. |
-| ספריית תרגילים | `/exercises`, `/exercises/[id]` | 80 תרגילים מובנים ותרגילים אישיים, חיפוש וסינון, 2 חלופות קבועות לכל תרגיל, והיסטוריה מלאה. |
+| ספריית תרגילים | `/exercises`, `/exercises/[id]` | 140 תרגילים מובנים ותרגילים אישיים, חיפוש וסינון, 2 חלופות קבועות לכל תרגיל, והיסטוריה מלאה. |
 | הגדרות | `/settings` | מטרה, אתגר, אתגרים קודמים והתנתקות. |
 
 ---
@@ -141,7 +141,7 @@ erDiagram
 | טבלה | תפקיד |
 | --- | --- |
 | `profiles` | שם המשתמש. נוצרת אוטומטית בהרשמה, על ידי ה-trigger `handle_new_user`. |
-| `exercises` | התרגילים. `user_id = null` הוא תרגיל מובנה (80 ב-seed), ואחרת תרגיל אישי. אפשר לארכב. |
+| `exercises` | התרגילים. `user_id = null` הוא תרגיל מובנה (140 ב-seed, כולל חימום, מתיחות ואמות), ואחרת תרגיל אישי. אפשר לארכב. |
 | `exercise_alternatives` | 2 חלופות קבועות לכל תרגיל, לפי עדיפות. |
 | `workout_templates`, `template_exercises` | תוכנית ותרגיליה: סטים, טווח חזרות, הערה ו"משקל נוכחי" (`target_weight_kg`). |
 | `workout_sessions` | אימון: `in_progress` או `completed`. לכל משתמש יש לכל היותר אימון פתוח אחד. |
@@ -229,7 +229,7 @@ src/
     use-today.ts, use-on-hidden.ts, format-date.ts
 supabase/
   migrations/                 הסכמה, RLS ופונקציות, לפי סדר
-  seed.sql                    80 תרגילים מובנים ו-160 חלופות
+  seed.sql                    140 תרגילים מובנים ו-280 חלופות
   tests/                      בדיקות pgTAP
 tests/integration/            בדיקות אינטגרציה מול Supabase המקומי
 e2e/main-flow.spec.ts         בדיקת הזרימה המלאה (Playwright)
@@ -309,7 +309,7 @@ npm run dev                  # http://localhost:3000
 - **שינויי סכמה עולים לענן בנפרד:**
   ```bash
   supabase db push --linked                 # migrations
-  supabase db push --linked --include-seed  # כשהספרייה המובנית משתנה
+  supabase db query --linked -f supabase/seed.sql --yes  # כשהספרייה המובנית משתנה (בטוח להריץ שוב)
   ```
 - **הגדרות Auth בענן:** Confirm email כבוי, ואורך סיסמה מינימלי 8.
 
@@ -342,6 +342,11 @@ npm run dev                  # http://localhost:3000
   - מודלים ישנים ו-`generateContent` סגורים למפתחות חדשים, ולכן משתמשים ב-Interactions API.
   - במכסה החינמית יש עומסים (503). הם לא נספרים במכסה, והקוד עובר למודל קל יותר.
 - **Supabase CLI:** החיבור ל-pooler של הענן נופל לפעמים. ניסיון נוסף בדרך כלל מצליח.
+- **ה-seed לא רץ שוב בענן:** `db push --include-seed` מדלג על seed שכבר נטען פעם אחת. לכן, אחרי שמוסיפים תרגילים מובנים, מריצים אותו ישירות:
+  ```bash
+  supabase db query --linked -f supabase/seed.sql --yes
+  ```
+  זה בטוח להריץ שוב ושוב, כי כל ההכנסות הן `on conflict do nothing`.
 
 ---
 
