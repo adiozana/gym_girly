@@ -10,6 +10,7 @@ import { listTemplates } from "@/lib/plans/queries";
 import { strings } from "@/lib/strings";
 import { getActiveSession } from "@/lib/workout/queries";
 import { getGoalData } from "@/lib/dashboard/queries";
+import { getProgressData } from "@/lib/progress/queries";
 
 // Home (SPEC.md "דשבורד").
 export default function HomePage() {
@@ -41,7 +42,12 @@ export default function HomePage() {
 }
 
 async function Home() {
-  const [active, templates, goalData] = await Promise.all([getActiveSession(), listTemplates(), getGoalData()]);
+  const [active, templates, goalData, progress] = await Promise.all([
+    getActiveSession(),
+    listTemplates(),
+    getGoalData(),
+    getProgressData(),
+  ]);
   const plans = templates.active.map((plan) => ({ id: plan.id, name: plan.name }));
   return (
     <div className="flex flex-col gap-8 pt-6">
@@ -50,7 +56,7 @@ async function Home() {
       ) : (
         <StartWorkout plans={templates.active} goals={goalData.goals} />
       )}
-      <Dashboard data={goalData} plans={plans} />
+      <Dashboard data={goalData} plans={plans} progress={progress} />
     </div>
   );
 }

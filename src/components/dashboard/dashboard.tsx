@@ -10,7 +10,9 @@ import { monthOf, type MonthKey } from "@/lib/dashboard/calendar";
 import type { ChallengeRow, GoalData } from "@/lib/dashboard/queries";
 import { activeGoal, plannedTemplateFor } from "@/lib/dashboard/today";
 import { strings } from "@/lib/strings";
+import type { ProgressPlan } from "@/lib/progress/queries";
 import { useToday } from "@/lib/use-today";
+import { ProgressSection } from "@/components/progress/progress-section";
 import { ChallengeCard } from "./challenge-card";
 import { GoalSheet } from "./goal-sheet";
 import { MonthCalendar } from "./month-calendar";
@@ -20,17 +22,19 @@ const { dashboard: copy } = strings;
 type DashboardProps = {
   data: GoalData;
   plans: { id: string; name: string }[];
+  progress: ProgressPlan[];
 };
 
-// Home below the start button (SPEC.md order): today and the streak, the month, the challenge.
+// Home below the start button (SPEC.md order): today and the streak, the month, the challenge,
+// and the progress chart.
 // Everything here depends on the device's "today", so it renders on the client.
-export function Dashboard({ data, plans }: DashboardProps) {
+export function Dashboard(props: DashboardProps) {
   const today = useToday();
   if (!today) return <DashboardSkeleton />;
-  return <DashboardForDay data={data} plans={plans} today={today} />;
+  return <DashboardForDay {...props} today={today} />;
 }
 
-function DashboardForDay({ data, plans, today }: DashboardProps & { today: string }) {
+function DashboardForDay({ data, plans, progress, today }: DashboardProps & { today: string }) {
   const [month, setMonth] = useState<MonthKey>(() => monthOf(today));
   const [editingGoal, setEditingGoal] = useState(false);
   const [justEnded, setJustEnded] = useState<ChallengeRow | null>(null);
@@ -112,6 +116,8 @@ function DashboardForDay({ data, plans, today }: DashboardProps & { today: strin
         completedDates={completed}
         today={today}
       />
+
+      <ProgressSection plans={progress} today={today} />
 
       <GoalSheet open={editingGoal} onOpenChange={setEditingGoal} current={goal} plans={plans} today={today} />
     </div>
