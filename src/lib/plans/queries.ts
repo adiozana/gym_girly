@@ -11,7 +11,7 @@ export async function listTemplates(): Promise<{ active: TemplateSummary[]; arch
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("workout_templates")
-    .select("id, name, is_archived, template_exercises(count)")
+    .select("id, name, is_archived, archived_at, template_exercises(count)")
     .order("created_at", { ascending: true });
   if (error) throw error;
 
@@ -22,6 +22,7 @@ export async function listTemplates(): Promise<{ active: TemplateSummary[]; arch
       id: row.id,
       name: row.name,
       is_archived: row.is_archived,
+      archived_at: row.archived_at,
       exercise_count: row.template_exercises[0]?.count ?? 0,
     };
     (row.is_archived ? archived : active).push(summary);
@@ -35,7 +36,7 @@ export async function getTemplate(id: string): Promise<TemplateDetail | null> {
   const { data, error } = await supabase
     .from("workout_templates")
     .select(
-      `id, name, is_archived,
+      `id, name, is_archived, archived_at,
        template_exercises (
          id, position, planned_sets, rep_range_min, rep_range_max, note, target_weight_kg,
          exercise:exercises (${EXERCISE_SUMMARY_COLUMNS})
@@ -50,6 +51,7 @@ export async function getTemplate(id: string): Promise<TemplateDetail | null> {
     id: data.id,
     name: data.name,
     is_archived: data.is_archived,
+    archived_at: data.archived_at,
     exercises: data.template_exercises.sort(byPosition).map((te) => ({
       id: te.id,
       position: te.position,

@@ -8,6 +8,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { PlanAssistant } from "@/components/plans/plan-assistant";
 import { PlanMenu } from "@/components/plans/plan-menu";
 import { PlanNameSheet } from "@/components/plans/plan-name-sheet";
+import { PurgeNote } from "@/components/plans/purge-note";
 import { ArchivedSection } from "@/components/shared/archived-section";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export function PlanList({
       )}
 
       <ArchivedSection title={strings.plans.archivedSection} count={archived.length}>
+        <p className="mb-3 text-caption text-ink-muted">{strings.plans.archivedSectionHint}</p>
         <ul className="flex flex-col gap-3">
           {archived.map((plan) => (
             <li key={plan.id}>
@@ -103,6 +105,7 @@ function PlanCard({ plan }: { plan: TemplateSummary }) {
           <span className="text-caption text-ink-muted">
             {plan.exercise_count === 0 ? strings.plans.noExercises : strings.plans.exerciseCount(plan.exercise_count)}
           </span>
+          {plan.is_archived && <PurgeNote archivedAt={plan.archived_at} className="text-caption text-rose-deep" />}
         </span>
         <ChevronRightIcon aria-hidden="true" className="size-5 shrink-0 text-ink-subtle rtl:-scale-x-100" />
       </Link>

@@ -6,3 +6,4 @@ export * from "./streak";
 export * from "./challenge";
 export * from "./progress";
 export * from "./summary";
+export * from "./archive";

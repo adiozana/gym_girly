@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SettingsGoals } from "@/components/dashboard/settings-goals";
+import { InstallGuideButton } from "@/components/install/install-guide-button";
 import { ProfileCard } from "@/components/settings/profile-card";
 import { signOut } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -39,6 +40,10 @@ export default function SettingsPage() {
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <Goals />
         </Suspense>
+      </div>
+
+      <div className="mt-6">
+        <InstallGuideButton />
       </div>
 
       {/* Dangerous actions sit apart from the rest, at the bottom (design skill). */}

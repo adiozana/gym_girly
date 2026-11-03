@@ -1,6 +1,7 @@
 import { Cog6ToothIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { Suspense } from "react";
+import { InstallGuideOnce } from "@/components/install/install-guide-once";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dashboard } from "@/components/dashboard/dashboard";
 import { ActiveSessionBanner } from "@/components/workout/active-session-banner";
@@ -37,6 +38,8 @@ export default function HomePage() {
       <Suspense fallback={<Skeleton className="mt-6 h-96 w-full" />}>
         <Home />
       </Suspense>
+
+      <InstallGuideOnce />
     </>
   );
 }

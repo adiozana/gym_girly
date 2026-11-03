@@ -4,6 +4,8 @@ export type TemplateSummary = {
   id: string;
   name: string;
   is_archived: boolean;
+  // When it was archived (ISO); it's deleted 30 days later. null while active.
+  archived_at: string | null;
   exercise_count: number;
 };
 
@@ -22,5 +24,6 @@ export type TemplateDetail = {
   id: string;
   name: string;
   is_archived: boolean;
+  archived_at: string | null;
   exercises: TemplateExerciseItem[];
 };

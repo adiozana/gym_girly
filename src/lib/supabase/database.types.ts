@@ -237,14 +237,14 @@ isOneToOne: false
                   ]
                 },"workout_templates": {
                   Row: {
-                    "created_at": string,"id": string,"is_archived": boolean,"name": string,"user_id": string
+                    "archived_at": string | null,"created_at": string,"id": string,"is_archived": boolean,"name": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"is_archived"?: boolean,"name": string,"user_id": string
+                    "archived_at"?: string | null,"created_at"?: string,"id"?: string,"is_archived"?: boolean,"name": string,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"is_archived"?: boolean,"name"?: string,"user_id"?: string
+                    "archived_at"?: string | null,"created_at"?: string,"id"?: string,"is_archived"?: boolean,"name"?: string,"user_id"?: string
                   }
                   Relationships: [
                     
@@ -295,6 +295,9 @@ isOneToOne: false
 { Args: { "p_before"?: string,"p_exclude_session_id"?: string,"p_exercise_ids": (string)[] }; Returns: {
               "exercise_id": string,"note": string,"reps": number,"session_id": string,"set_number": number,"started_at": string,"weight_kg": number
             }[]
+                           },
+"purge_archived_templates":
+{ Args: { "p_retention"?: string }; Returns: number
                            },
 "renumber_sets":
 { Args: { "p_session_exercise_id": string }; Returns: undefined

@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { PlanNameSheet } from "@/components/plans/plan-name-sheet";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,11 +27,14 @@ type PlanMenuProps = {
   onArchivedChange?: (archived: boolean) => void;
 };
 
-// Overflow menu with the plan-level actions: rename, duplicate, archive / restore.
+// Overflow menu with the plan-level actions: rename, duplicate, archive (after a confirmation) /
+// restore.
 export function PlanMenu({ plan, onRenamed, onArchivedChange }: PlanMenuProps) {
   const router = useRouter();
   const [renaming, setRenaming] = useState(false);
-  const [, startTransition] = useTransition();
+  // Archiving leads to deletion after 30 days, so it asks first (restoring doesn't).
+  const [confirmingArchive, setConfirmingArchive] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   function duplicate() {
     startTransition(async () => {
@@ -44,6 +48,7 @@ export function PlanMenu({ plan, onRenamed, onArchivedChange }: PlanMenuProps) {
   function setArchived(archived: boolean, withUndo = true) {
     startTransition(async () => {
       const result = archived ? await archiveTemplate(plan.id) : await restoreTemplate(plan.id);
+      setConfirmingArchive(false);
       if (!result.ok) return void toast.error(result.error);
       onArchivedChange?.(archived);
       const removedAssignments = result.data?.removedAssignments ?? 0;
@@ -87,13 +92,24 @@ export function PlanMenu({ plan, onRenamed, onArchivedChange }: PlanMenuProps) {
               {strings.plans.restore}
             </DropdownMenuItem>
           ) : (
-            <DropdownMenuItem onClick={() => setArchived(true)}>
+            <DropdownMenuItem onClick={() => setConfirmingArchive(true)}>
               <ArchiveBoxArrowDownIcon aria-hidden="true" />
               {strings.plans.archive}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ConfirmDialog
+        open={confirmingArchive}
+        onOpenChange={setConfirmingArchive}
+        title={strings.plans.archiveConfirmTitle}
+        description={strings.plans.archiveConfirmBody(plan.name)}
+        confirmLabel={strings.plans.archiveConfirm}
+        cancelLabel={strings.common.cancel}
+        onConfirm={() => setArchived(true)}
+        pending={pending}
+      />
 
       <PlanNameSheet
         open={renaming}

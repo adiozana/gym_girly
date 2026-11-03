@@ -21,7 +21,7 @@ SPEC.md defines what each screen does; the skill defines how it looks. Where SPE
 
 ## Patterns (decided with Adi, stage 2)
 - **Plan editor:** compact rows (name, "3 × 8–12", current weight, drag handle); tapping a row opens a bottom sheet with all its settings. Reorder by dragging the handle (`@dnd-kit`), with "הזזה למעלה/למטה" in the sheet as the accessible alternative.
-- **Archive:** a toast with "ביטול" right after archiving, and a collapsed "בארכיון (n)" section at the bottom of the list where items can be restored. Applies to plans and personal exercises.
+- **Archive:** a toast with "ביטול" right after archiving, and a collapsed "בארכיון (n)" section at the bottom of the list where items can be restored. Applies to plans and personal exercises. Archived **plans** are deleted for good after 30 days, so archiving a plan first asks in a confirmation dialog (primary button, not `danger`: nothing is lost yet), and each archived plan shows "תימחק לצמיתות בעוד N ימים" in `rose-deep`.
 - **Small deletes** (an exercise from a plan) happen at once with an undo toast; **irreversible deletes** (a personal exercise) use a confirmation dialog with the solid `danger` button.
 - Choice from a short fixed list (muscle group, equipment) → wrapping chips (`ChoiceChips`); a filter row of chips scrolls horizontally.
 - Editor settings save as they change (500ms debounce), with a quiet "שומר / נשמר" line under the sheet title.

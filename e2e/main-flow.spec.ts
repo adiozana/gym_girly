@@ -1,5 +1,5 @@
-// The main flow (SPEC.md "בדיקות"): sign up (email + the welcome screen), build a plan with 2 exercises (one with a current
-// weight), a first workout, a second workout that shows last time's values, a swap to a library
+// The main flow (SPEC.md "בדיקות"): sign up (email, the welcome screen, the home-screen guide),
+// build a plan with 2 exercises (one with a current weight), a first workout, a second workout that shows last time's values, a swap to a library
 // alternative, save, the summary, and today marked in the history calendar.
 import { expect, test, type Page } from "@playwright/test";
 import { format } from "date-fns";
@@ -50,7 +50,20 @@ test("main flow: plan, two workouts with suggestions, swap, summary, calendar", 
     await page.getByLabel("איך לקרוא לך?").fill("עדי");
     await page.getByRole("button", { name: "המשך" }).click();
     await page.waitForURL("/");
+  });
+
+  // It opens over home at once, so the greeting is checked after closing it.
+  await test.step("the home-screen guide, once per device", async () => {
+    const guide = page.getByRole("dialog", { name: "הוספה למסך הבית" });
+    await expect(guide).toBeVisible();
+    // The test phone is an Android one, so its tab comes first.
+    await expect(guide.getByRole("radio", { name: "Android" })).toHaveAttribute("aria-checked", "true");
+    await guide.getByRole("button", { name: "הבנתי" }).click();
+    await expect(guide).toBeHidden();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("עדי");
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("עדי");
+    await expect(guide).toBeHidden();
   });
 
   await test.step("plan with 2 exercises and a current weight", async () => {

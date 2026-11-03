@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ExercisePicker } from "@/components/exercises/exercise-picker";
 import { TopBar } from "@/components/layout/top-bar";
 import { PlanMenu } from "@/components/plans/plan-menu";
+import { PurgeNote } from "@/components/plans/purge-note";
 import { SortableExerciseRow, type EditorItem } from "@/components/plans/sortable-exercise-row";
 import { AddPlanExerciseSheet } from "@/components/plans/add-plan-exercise-sheet";
 import type { PlanExerciseValues } from "@/components/plans/plan-exercise-fields";
@@ -56,7 +57,10 @@ function settingsOf(item: EditorItem): TemplateExerciseSettings {
 
 export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercises: ExerciseSummary[] }) {
   const [name, setName] = useState(plan.name);
-  const [archived, setArchived] = useState(plan.is_archived);
+  // When the plan was archived (it's deleted 30 days later); null while active.
+  const [archivedAt, setArchivedAt] = useState(plan.archived_at);
+  const archived = archivedAt !== null;
+  const setArchived = (next: boolean) => setArchivedAt(next ? new Date().toISOString() : null);
   const [items, setItems] = useState<EditorItem[]>(plan.exercises);
   // One row's accordion open at a time.
   const [openItemId, setOpenItemId] = useState<string | null>(null);
@@ -242,7 +246,10 @@ export function PlanEditor({ plan, exercises }: { plan: TemplateDetail; exercise
 
       {archived && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md bg-blush px-4 py-2">
-          <p className="text-label">{editor.archivedNote}</p>
+          <p className="flex flex-col text-label">
+            {editor.archivedNote}
+            <PurgeNote archivedAt={archivedAt} className="text-caption text-rose-deep" />
+          </p>
           <Button
             variant="link"
             className="shrink-0 px-0"

@@ -159,6 +159,7 @@ erDiagram
 | `complete_session` | מוחקת סטים שלא בוצעו ותרגילים ריקים, ממספרת מחדש, מעדכנת את "המשקל הנוכחי" בתוכנית ומסמנת את האימון כהושלם. |
 | `previous_performance` | הסטים של האימון האחרון שהושלם עבור כל תרגיל, אופציונלית עד תאריך מסוים (`p_before`). |
 | `duplicate_template`, `reorder_template_exercises`, `archive_template` | ניהול תוכניות. ארכוב מסיר גם את השיבוץ של התוכנית ליום במטרה. |
+| `purge_archived_templates` | רצה כל לילה ב-01:00 UTC (`pg_cron`, המשימה `purge-archived-plans`) ומוחקת תוכניות שבארכיון יותר מ-30 יום. `archived_at` מתעדכן לבד מ-`is_archived` (trigger). האימונים נשמרים, כי `template_id` מתאפס ושם התוכנית שמור באימון. |
 | `set_goal`, `start_challenge` | החלפת מטרה (הקודמת מסתיימת אתמול) ופתיחת אתגר. |
 | `set_exercise_alternatives`, `exercise_in_use` | חלופות לתרגיל אישי, ובדיקה אם אפשר למחוק תרגיל. |
 
@@ -178,6 +179,7 @@ erDiagram
   - בהרשמה, ה-trigger `handle_new_user` יוצר שורה ב-`profiles` בלי שם.
   - כל עוד אין `display_name`, הרכיב `RequireName` ב-layout של האפליקציה מעביר ל-`/welcome`.
   - שם: חובה, ומלא מראש מ-Google. מטרה: לא חובה.
+- **פרופיל או חשבון שנמחקו:** טוקן תקין בלי שורה ב-`profiles` נשלח ל-`/auth/reset`. אם החשבון עדיין קיים, הפרופיל נוצר מחדש ומסך ברוכים הבאים מופיע. אם החשבון נמחק, הסשן מתנקה ועוברים להתחברות. בלי זה, `/` ו-`/login` היו שולחים זה לזה בלולאה.
 - **הגנה על הדפים:** `proxy.ts` מרענן את הסשן ומעביר משתמש לא מחובר ל-`/login`. בנוסף, כל דף וכל פעולה בודקים שוב עם `getCurrentUser()`.
 
 ### אימון
@@ -298,10 +300,10 @@ npm run dev                  # http://localhost:3000
 
 | פקודה | מה נבדק | כמה |
 | --- | --- | --- |
-| `npm test` | Vitest: חישובים, ולידציה, תור הכתיבות, הצעות, לוח, ניקוי פלט ה-AI | 205 |
+| `npm test` | Vitest: חישובים, ולידציה, תור הכתיבות, הצעות, לוח, ניקוי פלט ה-AI | 210 |
 | `npm run test:integration` | משתמשים אמיתיים מול Supabase המקומי: בידוד בין משתמשים, תוכניות, אימונים | 23 |
-| `npm run db:test` | pgTAP: RLS, ה-seed, וכל פונקציות ה-SQL | 87 |
-| `npm run test:e2e` | Playwright: הרשמה, תוכנית, שני אימונים עם הצעות, החלפה לחלופה, סיכום ולוח | 1 זרימה |
+| `npm run db:test` | pgTAP: RLS, ה-seed, וכל פונקציות ה-SQL, מחיקת הארכיון | 99 |
+| `npm run test:e2e` | Playwright: הרשמה, מדריך מסך הבית, תוכנית, שני אימונים עם הצעות, החלפה לחלופה, סיכום ולוח | 1 זרימה |
 | `npm run typecheck`, `npm run lint`, `npm run build` | טיפוסים, ESLint ו-build | — |
 
 כל הבדיקות שיוצרות משתמשים רצות רק מול Supabase המקומי, אף פעם לא מול הענן.
@@ -335,7 +337,7 @@ npm run dev                  # http://localhost:3000
 ## התקנה על הטלפון
 
 1. פותחים את https://gym-girly.vercel.app בטלפון.
-2. **iPhone:** ב-Safari, כפתור השיתוף ← "הוספה למסך הבית". **Android:** ב-Chrome, תפריט ⋮ ← "הוספה למסך הבית".
+2. אחרי ההתחברות נפתח מדריך עם השלבים לטלפון (פעם אחת בכל מכשיר; אפשר לפתוח אותו שוב מההגדרות). בקצרה: **iPhone:** כפתור השיתוף ← "הוספה למסך הבית". **Android:** ב-Chrome, תפריט ⋮ ← "התקנת אפליקציה", או כפתור "התקנה" שבמדריך.
 3. פותחים מהאייקון. האפליקציה נפתחת במסך מלא, מימין לשמאל.
 
 ---
@@ -364,6 +366,7 @@ npm run dev                  # http://localhost:3000
   supabase db query --linked -f supabase/seed.sql --yes
   ```
   זה בטוח להריץ שוב ושוב, כי כל ההכנסות הן `on conflict do nothing`.
+- **המשימה הלילית (`pg_cron`):** בודקים שהיא קיימת ומתי רצה עם `select * from cron.job;` ו-`select * from cron.job_run_details order by start_time desc limit 5;`.
 
 ---
 
