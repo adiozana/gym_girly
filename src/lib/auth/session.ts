@@ -22,8 +22,9 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   if (!claims?.sub) redirect(LOGIN_PATH);
 
   const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", claims.sub).single();
-  // A valid token without a profile means the account was deleted: clear the stale cookie,
-  // or the proxy (which trusts the token) and this check would bounce between / and /login.
+  // A valid token without a profile: the profile row or the whole account was deleted.
+  // /auth/reset recreates the profile or signs the stale token out (see there); sending the
+  // user to /login instead would bounce, as the proxy trusts the token and sends them home.
   if (!profile) redirect(SESSION_RESET_PATH);
 
   const metadata = (claims.user_metadata ?? {}) as Record<string, unknown>;

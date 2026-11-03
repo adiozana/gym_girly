@@ -2,7 +2,7 @@ export const LOGIN_PATH = "/login";
 export const HOME_PATH = "/";
 export const WELCOME_PATH = "/welcome";
 export const AUTH_CALLBACK_PATH = "/auth/callback";
-// Clears a session whose account no longer exists (e.g. deleted in the dashboard).
+// Repairs a session whose profile or account was deleted (e.g. in the dashboard).
 export const SESSION_RESET_PATH = "/auth/reset";
 
 const AUTH_PATHS = new Set(["/login", "/signup"]);
