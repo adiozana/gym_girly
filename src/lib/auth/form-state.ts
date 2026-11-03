@@ -3,50 +3,52 @@ import { strings } from "@/lib/strings";
 
 const { errors } = strings.auth;
 
-export type AuthField = "username" | "password";
+export type AuthField = "email" | "password";
 
 export type AuthFormState = {
   fieldErrors?: Partial<Record<AuthField, string>>;
   formError?: string;
-  // Echoed back so the form keeps the typed username after a failed submit.
-  username?: string;
+  // Echoed back so the form keeps the typed email after a failed submit.
+  email?: string;
 };
 
-// The user never sees an email; Supabase Auth gets one derived from the username.
+// Accounts made before email sign-in have an internal email derived from their username.
 export const AUTH_EMAIL_DOMAIN = "users.gymtracker.local";
 
 export function usernameToEmail(username: string): string {
   return `${username}@${AUTH_EMAIL_DOMAIN}`;
 }
 
-export function fromValidationError(
-  error: z.ZodError,
-  username: string,
-): AuthFormState {
+// What the sign-in field holds: an email, or (older accounts) a username.
+export function toAuthEmail(identifier: string): string {
+  const value = identifier.trim().toLowerCase();
+  return value.includes("@") ? value : usernameToEmail(value);
+}
+
+export function fromValidationError(error: z.ZodError, email: string): AuthFormState {
   const fieldErrors: Partial<Record<AuthField, string>> = {};
   for (const issue of error.issues) {
     const field = issue.path[0];
-    if ((field === "username" || field === "password") && !fieldErrors[field]) {
+    if ((field === "email" || field === "password") && !fieldErrors[field]) {
       fieldErrors[field] = issue.message;
     }
   }
-  return { fieldErrors, username };
+  return { fieldErrors, email };
 }
 
-// Maps Supabase Auth error codes to Hebrew messages (SPEC.md: "הודעות שגיאה בעברית").
-export function fromAuthErrorCode(
-  code: string | undefined,
-  username: string,
-): AuthFormState {
+// Maps Supabase Auth error codes to Hebrew messages.
+export function fromAuthErrorCode(code: string | undefined, email: string): AuthFormState {
   switch (code) {
     case "user_already_exists":
     case "email_exists":
-      return { fieldErrors: { username: errors.usernameTaken }, username };
+      return { fieldErrors: { email: errors.emailTaken }, email };
+    case "email_address_invalid":
+      return { fieldErrors: { email: errors.emailInvalid }, email };
     case "invalid_credentials":
-      return { formError: errors.invalidCredentials, username };
+      return { formError: errors.invalidCredentials, email };
     case "weak_password":
-      return { fieldErrors: { password: errors.passwordTooShort }, username };
+      return { fieldErrors: { password: errors.passwordTooShort }, email };
     default:
-      return { formError: errors.generic, username };
+      return { formError: errors.generic, email };
   }
 }

@@ -3,22 +3,29 @@ import { strings } from "@/lib/strings";
 
 const { errors } = strings.auth;
 
-// Input is trimmed and lower-cased before validation (SPEC.md: usernames are case-insensitive).
-export const usernameSchema = z
+export const emailSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .regex(/^[a-z0-9_]{3,20}$/, { error: errors.usernameInvalid });
+  .min(1, { error: errors.emailRequired })
+  .pipe(z.email({ error: errors.emailInvalid }));
 
 export const signUpSchema = z.object({
-  username: usernameSchema,
+  email: emailSchema,
   password: z.string().min(8, { error: errors.passwordTooShort }),
 });
 
-// Sign-in doesn't enforce the password policy: a wrong password is just a wrong password.
+// Sign-in also accepts a username, for accounts made before email sign-in (see toAuthEmail).
+// It doesn't enforce the password policy: a wrong password is just a wrong password.
 export const signInSchema = z.object({
-  username: usernameSchema,
+  email: z.string().trim().toLowerCase().min(1, { error: errors.emailRequired }),
   password: z.string().min(1, { error: errors.passwordRequired }),
 });
+
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1, { error: strings.welcome.nameRequired })
+  .max(40, { error: strings.welcome.nameTooLong });
 
 export type Credentials = z.infer<typeof signUpSchema>;

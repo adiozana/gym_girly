@@ -6,7 +6,11 @@ import { LOGIN_PATH } from "./routes";
 
 export type CurrentUser = {
   id: string;
-  username: string;
+  email: string | null;
+  // Set on the welcome screen; null until then.
+  name: string | null;
+  // A name offered on the welcome screen (Google's full name), if any.
+  suggestedName: string | null;
 };
 
 // Data Access Layer entry point: every page and Server Action re-checks the session
@@ -14,15 +18,18 @@ export type CurrentUser = {
 export const getCurrentUser = cache(async (): Promise<CurrentUser> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  const userId = data?.claims.sub;
-  if (!userId) redirect(LOGIN_PATH);
+  const claims = data?.claims;
+  if (!claims?.sub) redirect(LOGIN_PATH);
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username")
-    .eq("id", userId)
-    .single();
+  const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", claims.sub).single();
   if (!profile) redirect(LOGIN_PATH);
 
-  return { id: userId, username: profile.username };
+  const metadata = (claims.user_metadata ?? {}) as Record<string, unknown>;
+  const suggested = typeof metadata.full_name === "string" ? metadata.full_name : typeof metadata.name === "string" ? metadata.name : null;
+  return {
+    id: claims.sub,
+    email: typeof claims.email === "string" && !claims.email.endsWith("@users.gymtracker.local") ? claims.email : null,
+    name: profile.display_name,
+    suggestedName: suggested?.trim().slice(0, 40) || null,
+  };
 });

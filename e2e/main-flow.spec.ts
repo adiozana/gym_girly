@@ -1,4 +1,4 @@
-// The main flow (SPEC.md "בדיקות"): sign up, build a plan with 2 exercises (one with a current
+// The main flow (SPEC.md "בדיקות"): sign up (email + the welcome screen), build a plan with 2 exercises (one with a current
 // weight), a first workout, a second workout that shows last time's values, a swap to a library
 // alternative, save, the summary, and today marked in the history calendar.
 import { expect, test, type Page } from "@playwright/test";
@@ -41,12 +41,16 @@ async function saveWorkout(page: Page) {
 }
 
 test("main flow: plan, two workouts with suggestions, swap, summary, calendar", async ({ page }) => {
-  await test.step("sign up", async () => {
+  await test.step("sign up with email, then the welcome screen", async () => {
     await page.goto("/signup");
-    await page.getByLabel("שם משתמש").fill(username);
+    await page.getByLabel("מייל").fill(`${username}@example.com`);
     await page.getByLabel("סיסמה", { exact: true }).fill("e2e-password-1");
     await page.getByRole("button", { name: "הרשמה" }).click();
+    await page.waitForURL("/welcome");
+    await page.getByLabel("איך לקרוא לך?").fill("עדי");
+    await page.getByRole("button", { name: "המשך" }).click();
     await page.waitForURL("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("עדי");
   });
 
   await test.step("plan with 2 exercises and a current weight", async () => {

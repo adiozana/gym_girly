@@ -59,12 +59,12 @@ select throws_ok(
   'sign-up with an invalid username is rejected'
 );
 
-select throws_ok(
-  $$insert into auth.users (id, email, aud, role)
-    values ('44444444-4444-4444-4444-444444444444', 'nobody@users.gymtracker.local', 'authenticated', 'authenticated')$$,
-  '23502',
-  null,
-  'sign-up without a username is rejected'
+insert into auth.users (id, email, aud, role)
+  values ('44444444-4444-4444-4444-444444444444', 'someone@example.com', 'authenticated', 'authenticated');
+select results_eq(
+  $$select username, display_name from public.profiles where id = '44444444-4444-4444-4444-444444444444'$$,
+  $$values (null::text, null::text)$$,
+  'email sign-up creates a profile without a username or name (set on the welcome screen)'
 );
 
 insert into public.exercises (id, user_id, name_he, muscle_group, equipment) values

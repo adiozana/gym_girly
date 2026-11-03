@@ -119,14 +119,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"id": string,"username": string
+                    "created_at": string,"display_name": string | null,"id": string,"username": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id": string,"username": string
+                    "created_at"?: string,"display_name"?: string | null,"id": string,"username"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"username"?: string
+                    "created_at"?: string,"display_name"?: string | null,"id"?: string,"username"?: string | null
                   }
                   Relationships: [
                     

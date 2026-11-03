@@ -33,7 +33,8 @@
 
 | מסך | נתיב | מה יש בו |
 | --- | --- | --- |
-| התחברות והרשמה | `/login`, `/signup` | שם משתמש וסיסמה בלבד, בלי מייל. נשארים מחוברים. |
+| התחברות והרשמה | `/login`, `/signup` | מייל וסיסמה, או Google. נשארים מחוברים. |
+| ברוכים הבאים | `/welcome` | אחרי ההתחברות הראשונה: שם (חובה) ומטרה (לא חובה). |
 | בית (דשבורד) | `/` | התחלת אימון או חזרה לאימון פתוח, "היום" לפי המטרה עם הסטריק, אתגר, וגרף התקדמות לכל תוכנית. |
 | אימון פעיל | `/workout/[id]` | שורה לכל תרגיל: ✓, שם, משקל וחזרות. הערכים מהפעם הקודמת או מהתוכנית מופיעים באפור, והקשה אחת מסמנת את כל התרגיל. אקורדיון עם הסבר, 2 חלופות, הפעם הקודמת, מספר סטים והערה. |
 | סיכום אימון | `/workout/[id]/summary` | משך, תרגילים, סטים ונפח, והשוואה לפעם הקודמת באחוזים לכל תרגיל. |
@@ -140,7 +141,7 @@ erDiagram
 
 | טבלה | תפקיד |
 | --- | --- |
-| `profiles` | שם המשתמש. נוצרת אוטומטית בהרשמה, על ידי ה-trigger `handle_new_user`. |
+| `profiles` | השם (`display_name`, נקבע במסך ברוכים הבאים), ושם משתמש לחשבונות ישנים. נוצרת אוטומטית בהרשמה, על ידי ה-trigger `handle_new_user`. |
 | `exercises` | התרגילים. `user_id = null` הוא תרגיל מובנה (140 ב-seed, כולל חימום, מתיחות ואמות), ואחרת תרגיל אישי. אפשר לארכב. |
 | `exercise_alternatives` | 2 חלופות קבועות לכל תרגיל, לפי עדיפות. |
 | `workout_templates`, `template_exercises` | תוכנית ותרגיליה: סטים, טווח חזרות, הערה ו"משקל נוכחי" (`target_weight_kg`). |
@@ -168,9 +169,16 @@ erDiagram
 ## זרימות מרכזיות
 
 ### הרשמה והתחברות
-- המשתמש מזין שם משתמש וסיסמה. Supabase Auth מקבל כתובת מייל פנימית, `<username>@users.gymtracker.local`, שלא מוצגת בשום מקום.
-- `proxy.ts` מרענן את הסשן בכל בקשה ומעביר משתמש לא מחובר ל-`/login`.
-- כל דף וכל פעולה בודקים את המשתמש שוב עם `getCurrentUser()`, ולא סומכים רק על ה-proxy.
+- **מייל וסיסמה:** `supabase.auth.signUp` ו-`signInWithPassword`. אימות המייל כבוי, אז נכנסים מיד.
+- **Google:**
+  - הכפתור מריץ את `signInWithOAuth`, ו-Google חוזר ל-`/auth/callback` (`src/app/auth/callback/route.ts`), שמחליף את הקוד בסשן.
+  - המפתחות של Google מוגדרים רק בדשבורד של Supabase (Authentication → Providers → Google), לא באפליקציה ולא ב-Vercel.
+- **חשבונות ישנים:** אפשר להזין בשדה המייל את שם המשתמש הישן, והוא מתורגם למייל הפנימי (`toAuthEmail`).
+- **מסך ברוכים הבאים:**
+  - בהרשמה, ה-trigger `handle_new_user` יוצר שורה ב-`profiles` בלי שם.
+  - כל עוד אין `display_name`, הרכיב `RequireName` ב-layout של האפליקציה מעביר ל-`/welcome`.
+  - שם: חובה, ומלא מראש מ-Google. מטרה: לא חובה.
+- **הגנה על הדפים:** `proxy.ts` מרענן את הסשן ומעביר משתמש לא מחובר ל-`/login`. בנוסף, כל דף וכל פעולה בודקים שוב עם `getCurrentUser()`.
 
 ### אימון
 1. **התחלה:** "התחלת אימון" קורא ל-`start_session`, עם התאריך המקומי של המכשיר.
@@ -311,7 +319,16 @@ npm run dev                  # http://localhost:3000
   supabase db push --linked                 # migrations
   supabase db query --linked -f supabase/seed.sql --yes  # כשהספרייה המובנית משתנה (בטוח להריץ שוב)
   ```
-- **הגדרות Auth בענן:** Confirm email כבוי, ואורך סיסמה מינימלי 8.
+- **הגדרות Auth בענן (Supabase → Authentication):**
+  - **Providers:**
+    - Email: Confirm email כבוי, ואורך סיסמה מינימלי 8.
+    - Google: מופעל, עם Client ID ו-Secret.
+  - **URL Configuration:**
+    - Site URL: `https://gym-girly.vercel.app`.
+    - Redirect URLs: `https://gym-girly.vercel.app/**`, `http://localhost:3000/**` ו-`https://gym-girly-*-adiozanas-projects.vercel.app/**`.
+- **Google Cloud Console (OAuth client):**
+  - Authorized redirect URI: `https://zaosoubunwsslfrrrfky.supabase.co/auth/v1/callback`.
+  - Authorized JavaScript origins: כתובת האפליקציה ו-`http://localhost:3000`.
 
 ---
 

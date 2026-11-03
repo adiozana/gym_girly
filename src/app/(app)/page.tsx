@@ -65,7 +65,13 @@ async function Greeting() {
   const user = await getCurrentUser();
   return (
     <h1 className="text-title font-semibold">
-      {strings.home.greeting} <bdi>{user.username}</bdi>
+      {user.name ? (
+        <>
+          {strings.home.greeting} <bdi>{user.name}</bdi>
+        </>
+      ) : (
+        strings.home.greetingNoName
+      )}
     </h1>
   );
 }

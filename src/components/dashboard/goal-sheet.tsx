@@ -21,6 +21,7 @@ type GoalSheetProps = {
   current: StoredGoal | null;
   plans: readonly PlanOption[];
   today: string;
+  onSaved?: () => void;
 };
 
 type Draft = {
@@ -62,7 +63,7 @@ function Stepper({ label, value, min, max, onChange }: { label: string; value: n
 
 // Sets or changes the goal (SPEC.md "מטרה"): fixed weekdays (optionally a plan per day) or a
 // cycle of training and rest days. A change applies from today.
-export function GoalSheet({ open, onOpenChange, current, plans, today }: GoalSheetProps) {
+export function GoalSheet({ open, onOpenChange, current, plans, today, onSaved }: GoalSheetProps) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(current));
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -101,6 +102,7 @@ export function GoalSheet({ open, onOpenChange, current, plans, today }: GoalShe
       const result = await saveGoal(input, today);
       if (!result.ok) return void toast.error(result.error);
       onOpenChange(false);
+      onSaved?.();
       toast.success(copy.saved);
     });
   }

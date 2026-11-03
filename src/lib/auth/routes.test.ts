@@ -9,7 +9,7 @@ describe("authRedirectFor", () => {
     },
   );
 
-  it.each(["/login", "/signup"])("lets signed-out users open %s", (path) => {
+  it.each(["/login", "/signup", "/auth/callback"])("lets signed-out users open %s", (path) => {
     expect(authRedirectFor(path, false)).toBeNull();
   });
 
